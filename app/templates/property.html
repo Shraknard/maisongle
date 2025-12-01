@@ -1,0 +1,1260 @@
+{% extends "base.html" %}
+
+{% block title %}Détail du bien - Maisongle{% endblock %}
+
+{% block content %}
+<div id="loading" class="text-center py-12">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+    <p class="mt-4 text-gray-500">Chargement...</p>
+</div>
+
+<div id="propertyContent" class="hidden space-y-6">
+    <!-- Back button -->
+    <a href="javascript:history.back()" class="inline-flex items-center text-gray-600 hover:text-blue-600 transition">
+        <i data-lucide="arrow-left" class="w-5 h-5 mr-2"></i>
+        Retour
+    </a>
+    
+    <!-- Main content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left column: Images and description -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Image gallery -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="relative group">
+                    <img id="mainImage" src="" alt="Photo principale" class="w-full h-96 object-cover cursor-pointer" onclick="openFullscreen()">
+                    
+                    <!-- Navigation arrows -->
+                    <button onclick="prevImage()" class="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition opacity-0 group-hover:opacity-100">
+                        <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                    </button>
+                    <button onclick="nextImage()" class="absolute right-16 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition opacity-0 group-hover:opacity-100">
+                        <i data-lucide="chevron-right" class="w-6 h-6"></i>
+                    </button>
+                    
+                    <!-- Fullscreen button -->
+                    <button onclick="openFullscreen()" class="absolute bottom-4 right-4 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition opacity-0 group-hover:opacity-100">
+                        <i data-lucide="maximize" class="w-5 h-5"></i>
+                    </button>
+                    
+                    <!-- Favorite button -->
+                    <button id="favoriteBtn" onclick="togglePropertyFavorite()" 
+                            class="absolute top-4 right-4 p-3 bg-white rounded-full shadow-lg hover:scale-110 transition">
+                        <i data-lucide="heart" class="w-6 h-6"></i>
+                    </button>
+                    
+                    <!-- Image counter -->
+                    <div id="imageCounter" class="absolute bottom-4 left-4 px-3 py-1 bg-black/50 text-white text-sm rounded-full">
+                        1 / 1
+                    </div>
+                </div>
+                <div id="thumbnails" class="flex gap-2 p-4 overflow-x-auto">
+                </div>
+            </div>
+            
+            <!-- Description -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Description</h2>
+                <p id="description" class="text-gray-600 whitespace-pre-line"></p>
+            </div>
+            
+            <!-- Features -->
+            <div id="featuresSection" class="bg-white rounded-xl shadow-sm p-6 hidden">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Caractéristiques</h2>
+                <div id="features" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right column: Info and contact -->
+        <div class="space-y-6">
+            <!-- Price and main info -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h1 id="title" class="text-2xl font-bold text-gray-900 mb-2"></h1>
+                <p id="price" class="text-3xl font-bold text-blue-600 mb-4"></p>
+                
+                <div class="flex items-center text-gray-500 mb-4">
+                    <i data-lucide="map-pin" class="w-5 h-5 mr-2"></i>
+                    <span id="location"></span>
+                </div>
+                
+                <div id="mainStats" class="grid grid-cols-3 gap-4 py-4 border-t border-b">
+                </div>
+                
+                <!-- Dates -->
+                <div id="datesSection" class="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
+                </div>
+                
+                <!-- Energy DPE/GES -->
+                <div id="energySection" class="mt-4 hidden">
+                    <h3 class="font-semibold text-gray-900 mb-3">Diagnostics énergétiques</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- DPE Gauge -->
+                        <div>
+                            <p class="text-xs text-gray-500 mb-2 text-center">Consommation énergétique (DPE)</p>
+                            <div id="dpeGauge" class="space-y-1">
+                            </div>
+                        </div>
+                        <!-- GES Gauge -->
+                        <div>
+                            <p class="text-xs text-gray-500 mb-2 text-center">Émissions de gaz (GES)</p>
+                            <div id="gesGauge" class="space-y-1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Zonage ABC -->
+            <div id="zonageSection" class="bg-white rounded-xl shadow-sm p-6 hidden">
+                <h2 class="text-lg font-bold text-gray-900 mb-3">Zonage Pinel</h2>
+                <div id="zonageContent" class="text-center">
+                </div>
+            </div>
+            
+            <!-- Georisques -->
+            <div id="georisquesSection" class="bg-white rounded-xl shadow-sm p-6 hidden">
+                <h2 class="text-lg font-bold text-gray-900 mb-3">Risques naturels et technologiques</h2>
+                <div id="georisquesContent" class="space-y-3">
+                </div>
+            </div>
+            
+            <!-- Contact -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Contact</h2>
+                <div id="contactInfo" class="space-y-3">
+                </div>
+                <a id="originalUrl" href="#" target="_blank" 
+                   class="mt-4 block w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-center">
+                    <span class="inline-flex items-center gap-2"><i data-lucide="external-link" class="w-5 h-5"></i>Voir l'annonce originale</span>
+                </a>
+                <a id="calculatorLink" href="/calculator" 
+                   class="mt-2 block w-full text-center py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
+                    <i data-lucide="calculator" class="w-5 h-5"></i>
+                    Simuler un prêt
+                </a>
+            </div>
+            
+            <!-- Map -->
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-bold text-gray-900">Localisation & Commodités</h2>
+                    <button onclick="openMapFullscreen()" class="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition">
+                        <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                        <span>Agrandir</span>
+                    </button>
+                </div>
+                <div id="map"></div>
+                <!-- POI Legend -->
+                <div id="poiLegend" class="mt-3 hidden">
+                    <p class="text-xs text-gray-500 mb-2">Commodités dans un rayon de 500m :</p>
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Transport</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Écoles</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> Commerces</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500"></span> Santé</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-500"></span> Loisirs</span>
+                    </div>
+                </div>
+                <div id="poiLoading" class="mt-2 text-xs text-gray-400 hidden">
+                    <span class="animate-pulse">Chargement des commodités...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Raw JSON Data -->
+    <div class="mt-6">
+        <button onclick="toggleJsonData()" class="flex items-center text-sm text-gray-500 hover:text-gray-700 transition">
+            <i data-lucide="code" class="w-4 h-4 mr-2"></i>
+            <span id="jsonToggleText">Afficher les données brutes (JSON)</span>
+            <i data-lucide="chevron-down" id="jsonChevron" class="w-4 h-4 ml-1 transition-transform"></i>
+        </button>
+        <div id="jsonDataSection" class="hidden mt-3">
+            <pre id="jsonData" class="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto"></pre>
+        </div>
+    </div>
+</div>
+
+<div id="errorState" class="hidden text-center py-12" style="display: none;">
+    <i data-lucide="alert-circle" class="w-16 h-16 text-red-400 mx-auto mb-4"></i>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">Bien non trouvé</h3>
+    <p class="text-gray-500 mb-4">Ce bien n'existe pas ou n'est plus disponible.</p>
+    <a href="/" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+        Retour à la recherche
+    </a>
+</div>
+
+<!-- Fullscreen image modal -->
+<div id="fullscreenModal" class="fixed inset-0 bg-black z-50 hidden" onclick="closeFullscreen(event)">
+    <button onclick="closeFullscreen()" class="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition z-10">
+        <i data-lucide="x" class="w-8 h-8"></i>
+    </button>
+    
+    <button onclick="event.stopPropagation(); prevImage()" class="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white hover:bg-white/20 rounded-full transition">
+        <i data-lucide="chevron-left" class="w-10 h-10"></i>
+    </button>
+    
+    <button onclick="event.stopPropagation(); nextImage()" class="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white hover:bg-white/20 rounded-full transition">
+        <i data-lucide="chevron-right" class="w-10 h-10"></i>
+    </button>
+    
+    <div class="flex items-center justify-center h-full p-8">
+        <img id="fullscreenImage" src="" alt="Photo en plein écran" class="max-w-full max-h-full object-contain">
+    </div>
+    
+    <div id="fullscreenCounter" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/50 text-white rounded-full">
+        1 / 1
+    </div>
+</div>
+
+<!-- Fullscreen map modal -->
+<div id="mapFullscreenModal" class="fixed inset-0 bg-white z-[9999] hidden">
+    <div class="absolute top-4 right-4 z-[1000] flex gap-2">
+        <button onclick="closeMapFullscreen()" class="p-2 bg-white shadow-lg rounded-full hover:bg-gray-100 transition">
+            <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+    </div>
+    <div id="fullscreenMap" class="w-full h-full"></div>
+    <!-- Fullscreen POI Legend -->
+    <div class="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-3">
+        <p class="text-xs text-gray-500 mb-2 font-medium">Commodités (500m) :</p>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Transport</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Écoles</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> Commerces</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500"></span> Santé</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-500"></span> Loisirs</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const propertyUuid = '{{ property_uuid }}';
+    let propertyData = null;
+    let favoriteData = null;
+    let map;
+    let fullscreenMap = null;
+    let currentImageIndex = 0;
+    let allPictures = [];
+    let cachedPOIs = [];
+    
+    // Extract site name from URL
+    function getSiteName(url) {
+        if (!url) return null;
+        try {
+            const hostname = new URL(url).hostname.replace('www.', '');
+            const siteNames = {
+                'leboncoin.fr': 'Leboncoin',
+                'seloger.com': 'SeLoger',
+                'pap.fr': 'PAP',
+                'logic-immo.com': 'Logic-Immo',
+                'bien-ici.fr': 'Bien\'ici',
+                'orpi.com': 'Orpi',
+                'century21.fr': 'Century 21',
+                'laforet.com': 'Laforêt',
+                'fnaim.fr': 'FNAIM',
+                'immobilier.lefigaro.fr': 'Figaro Immo',
+                'ouestfrance-immo.com': 'Ouest-France Immo',
+                'avendrealouer.fr': 'AVendreALouer',
+                'explorimmo.com': 'Explorimmo',
+                'meilleursagents.com': 'MeilleursAgents',
+                'superimmo.com': 'Superimmo',
+                'paruvendu.fr': 'ParuVendu',
+            };
+            return siteNames[hostname] || hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
+        } catch (e) {
+            return null;
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadProperty();
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') prevImage();
+            if (e.key === 'ArrowRight') nextImage();
+            if (e.key === 'Escape') closeFullscreen();
+        });
+    });
+    
+    async function loadProperty() {
+        try {
+            // First check if it's a favorite (has enriched data)
+            const favResponse = await fetch(`/api/favorites/${propertyUuid}`);
+            if (favResponse.ok) {
+                favoriteData = await favResponse.json();
+            }
+            
+            // Get property data from Melo API
+            const response = await fetch(`/api/properties/${propertyUuid}`);
+            
+            if (!response.ok) {
+                throw new Error('Property not found');
+            }
+            
+            propertyData = await response.json();
+            await displayProperty();
+            
+        } catch (error) {
+            console.error('Error loading property:', error);
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('errorState').style.display = 'block';
+            lucide.createIcons();
+        }
+    }
+    
+    async function displayProperty() {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('propertyContent').classList.remove('hidden');
+        
+        const prop = propertyData;
+        const advert = prop.adverts?.[0] || {};
+        
+        // Title and price
+        document.getElementById('title').textContent = prop.title || 'Sans titre';
+        document.getElementById('price').textContent = formatPrice(prop.price, prop.transactionType);
+        
+        // Fetch price data and show price indicator (DVF for sales, Loyers for rentals)
+        const city = prop.city || {};
+        const isRental = prop.transactionType === 1;
+        
+        if (city.insee && prop.price && prop.surface) {
+            try {
+                let priceData = null;
+                let dataSource = '';
+                let priceUnit = '';
+                
+                if (isRental) {
+                    // Fetch rental price data
+                    const loyerResponse = await fetch(`/api/search/loyers/${city.insee}?type_bien=appartement`);
+                    const loyerData = await loyerResponse.json();
+                    if (loyerData && loyerData.loyer_m2) {
+                        priceData = { prix_m2_moyen: loyerData.loyer_m2 };
+                        dataSource = 'Carte des Loyers 2024';
+                        priceUnit = '€/m²/mois';
+                    }
+                } else {
+                    // Fetch sale price data (DVF)
+                    const dvfResponse = await fetch(`/api/search/dvf/${city.insee}`);
+                    const dvfData = await dvfResponse.json();
+                    if (dvfData && dvfData.prix_m2_moyen) {
+                        priceData = dvfData;
+                        dataSource = `DVF ${dvfData.annee}`;
+                        priceUnit = '€/m²';
+                    }
+                }
+                
+                if (priceData && priceData.prix_m2_moyen) {
+                    const prixM2 = prop.price / prop.surface;
+                    const ratio = prixM2 / priceData.prix_m2_moyen;
+                    let indicatorHtml = '';
+                    
+                    if (ratio < 0.85) {
+                        const pct = Math.round((1 - ratio) * 100);
+                        indicatorHtml = `<span class="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded bg-green-100 text-green-600 text-sm font-medium" title="Prix au m² inférieur à la moyenne"><i data-lucide="trending-down" class="w-4 h-4"></i>-${pct}% vs moyenne</span>`;
+                    } else if (ratio > 1.15) {
+                        const pct = Math.round((ratio - 1) * 100);
+                        indicatorHtml = `<span class="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded bg-red-100 text-red-600 text-sm font-medium" title="Prix au m² supérieur à la moyenne"><i data-lucide="trending-up" class="w-4 h-4"></i>+${pct}% vs moyenne</span>`;
+                    } else {
+                        indicatorHtml = `<span class="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 text-gray-600 text-sm font-medium" title="Prix au m² proche de la moyenne"><i data-lucide="minus" class="w-4 h-4"></i>≈ moyenne</span>`;
+                    }
+                    
+                    document.getElementById('price').insertAdjacentHTML('afterend', indicatorHtml);
+                    
+                    // Add price details section
+                    const priceSection = document.createElement('div');
+                    priceSection.className = 'mt-3 p-3 bg-gray-50 rounded-lg text-sm';
+                    
+                    // Check if it's Paris, Lyon or Marseille (arrondissements)
+                    const isArrondissement = city.insee?.startsWith('751') || 
+                                            city.insee?.startsWith('6938') || 
+                                            (city.insee?.startsWith('132') && city.insee >= '13201' && city.insee <= '13216');
+                    const cityNote = isArrondissement ? 
+                        `<span class="relative group inline-flex items-center text-blue-600 cursor-help ml-1">
+                            <i data-lucide="info" class="w-3 h-3"></i>
+                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                Prix moyen calculé sur l'ensemble de la ville<br>(données non disponibles par arrondissement)
+                            </span>
+                        </span>` : '';
+                    
+                    const mainCityName = city.insee?.startsWith('751') ? 'Paris' :
+                                        city.insee?.startsWith('6938') ? 'Lyon' :
+                                        (city.insee?.startsWith('132') && city.insee >= '13201' && city.insee <= '13216') ? 'Marseille' :
+                                        city.name;
+                    
+                    priceSection.innerHTML = `
+                        <p class="text-gray-500 mb-1 flex items-center gap-1">${dataSource} - ${mainCityName} ${cityNote}</p>
+                        <div class="grid grid-cols-2 gap-2 text-gray-700">
+                            <div>${isRental ? 'Loyer' : 'Prix'} m² moyen: <strong>${Math.round(priceData.prix_m2_moyen).toLocaleString('fr-FR')} ${priceUnit}</strong></div>
+                            <div>Ce bien: <strong>${Math.round(prixM2).toLocaleString('fr-FR')} ${priceUnit}</strong></div>
+                        </div>
+                    `;
+                    document.getElementById('price').parentElement.appendChild(priceSection);
+                    lucide.createIcons();
+                }
+            } catch (e) {
+                console.error('Error fetching DVF data:', e);
+            }
+        }
+        
+        // Location
+        document.getElementById('location').textContent = `${city.name || ''} ${city.zipcode || ''} - ${city.department?.name || ''}`;
+        
+        // Main image
+        allPictures = prop.pictures || [];
+        currentImageIndex = 0;
+        updateMainImage();
+        
+        // Thumbnails
+        const thumbnails = document.getElementById('thumbnails');
+        thumbnails.innerHTML = allPictures.map((pic, i) => `
+            <img src="${pic}" alt="Photo ${i+1}" 
+                 class="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition ${i === 0 ? 'ring-2 ring-blue-500' : ''}"
+                 onclick="selectImageByIndex(${i})"
+                 onerror="this.style.display='none'">
+        `).join('');
+        
+        // Main stats
+        const stats = document.getElementById('mainStats');
+        stats.innerHTML = `
+            ${prop.surface ? `<div class="text-center"><div class="text-2xl font-bold text-gray-900">${prop.surface}</div><div class="text-sm text-gray-500">m²</div></div>` : ''}
+            ${prop.room ? `<div class="text-center"><div class="text-2xl font-bold text-gray-900">${prop.room}</div><div class="text-sm text-gray-500">pièces</div></div>` : ''}
+            ${prop.bedroom ? `<div class="text-center"><div class="text-2xl font-bold text-gray-900">${prop.bedroom}</div><div class="text-sm text-gray-500">chambres</div></div>` : ''}
+        `;
+        
+        // Dates
+        const datesSection = document.getElementById('datesSection');
+        const createdAt = advert.createdAt || prop.createdAt;
+        const updatedAt = advert.updatedAt || prop.updatedAt;
+        const lastCrawledAt = advert.lastCrawledAt || prop.lastCrawledAt;
+        
+        let datesHtml = '';
+        if (createdAt) {
+            const date = new Date(createdAt);
+            datesHtml += `<span class="flex items-center gap-1"><i data-lucide="calendar-plus" class="w-4 h-4"></i>Publiée le ${date.toLocaleDateString('fr-FR')}</span>`;
+        }
+        if (updatedAt && updatedAt !== createdAt) {
+            const date = new Date(updatedAt);
+            datesHtml += `<span class="flex items-center gap-1"><i data-lucide="calendar-clock" class="w-4 h-4"></i>Modifiée le ${date.toLocaleDateString('fr-FR')}</span>`;
+        }
+        if (lastCrawledAt) {
+            const date = new Date(lastCrawledAt);
+            datesHtml += `<span class="flex items-center gap-1"><i data-lucide="refresh-cw" class="w-4 h-4"></i>Vérifiée le ${date.toLocaleDateString('fr-FR')}</span>`;
+        }
+        datesSection.innerHTML = datesHtml;
+        
+        // Description
+        document.getElementById('description').textContent = prop.description || advert.description || 'Pas de description disponible.';
+        
+        // Features
+        const features = advert.features || [];
+        if (features.length > 0) {
+            document.getElementById('featuresSection').classList.remove('hidden');
+            document.getElementById('features').innerHTML = features.map(f => `
+                <div class="flex items-center text-gray-600">
+                    <i data-lucide="check" class="w-4 h-4 mr-2 text-green-500"></i>
+                    <span>${f}</span>
+                </div>
+            `).join('');
+        }
+        
+        // Energy DPE/GES gauges
+        const energy = advert.energy;
+        const ghg = advert.greenHouseGas;
+        if (energy || ghg) {
+            document.getElementById('energySection').classList.remove('hidden');
+            if (energy) {
+                document.getElementById('dpeGauge').innerHTML = buildDPEGauge(energy.category, energy.value);
+            }
+            if (ghg) {
+                document.getElementById('gesGauge').innerHTML = buildGESGauge(ghg.category, ghg.value);
+            }
+        }
+        
+        // Contact
+        const contact = advert.contact || {};
+        document.getElementById('contactInfo').innerHTML = `
+            ${contact.agency ? `<div class="flex items-center"><i data-lucide="building" class="w-5 h-5 mr-2 text-gray-400"></i><span>${contact.agency}</span></div>` : ''}
+            ${contact.phone ? `<div class="flex items-center"><i data-lucide="phone" class="w-5 h-5 mr-2 text-gray-400"></i><a href="tel:${contact.phone}" class="text-blue-600 hover:underline">${contact.phone}</a></div>` : ''}
+            ${contact.email ? `<div class="flex items-center"><i data-lucide="mail" class="w-5 h-5 mr-2 text-gray-400"></i><a href="mailto:${contact.email}" class="text-blue-600 hover:underline">${contact.email}</a></div>` : ''}
+        `;
+        
+        // Original URL with site name - try to find URL in any advert
+        const urlBtn = document.getElementById('originalUrl');
+        const advertWithUrl = prop.adverts?.find(a => a.url) || {};
+        if (advertWithUrl.url) {
+            const siteName = getSiteName(advertWithUrl.url);
+            urlBtn.href = advertWithUrl.url;
+            urlBtn.innerHTML = `<span class="inline-flex items-center gap-2"><i data-lucide="external-link" class="w-5 h-5"></i>Voir sur ${siteName || 'le site'}</span>`;
+        } else {
+            urlBtn.style.display = 'none';
+        }
+        
+        // Calculator link with price
+        if (prop.price) {
+            document.getElementById('calculatorLink').href = `/calculator?price=${Math.round(prop.price)}`;
+        }
+        
+        // Initialize icons first so updateFavoriteButton can find them
+        lucide.createIcons();
+        
+        // Favorite button state
+        updateFavoriteButton();
+        
+        // Zonage ABC (only if favorite)
+        if (favoriteData?.zonage_abc) {
+            document.getElementById('zonageSection').classList.remove('hidden');
+            document.getElementById('zonageContent').innerHTML = `
+                <div class="inline-block px-6 py-3 rounded-lg ${getZonageColor(favoriteData.zonage_abc)}">
+                    <div class="text-3xl font-bold">${favoriteData.zonage_abc}</div>
+                    <div class="text-sm">${getZonageLabel(favoriteData.zonage_abc)}</div>
+                </div>
+            `;
+        }
+        
+        // Georisques (only if favorite)
+        if (favoriteData?.georisques) {
+            displayGeorisques(favoriteData.georisques);
+        }
+        
+        // Map
+        initMap(prop.location || prop.city?.location);
+        
+        // Prepare JSON data for display
+        document.getElementById('jsonData').textContent = JSON.stringify(prop, null, 2);
+    }
+    
+    function toggleJsonData() {
+        const section = document.getElementById('jsonDataSection');
+        const text = document.getElementById('jsonToggleText');
+        const chevron = document.getElementById('jsonChevron');
+        
+        if (section.classList.contains('hidden')) {
+            section.classList.remove('hidden');
+            text.textContent = 'Masquer les données brutes (JSON)';
+            chevron.style.transform = 'rotate(180deg)';
+        } else {
+            section.classList.add('hidden');
+            text.textContent = 'Afficher les données brutes (JSON)';
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    }
+    
+    function updateMainImage() {
+        const mainImg = document.getElementById('mainImage');
+        const fullscreenImg = document.getElementById('fullscreenImage');
+        const counter = document.getElementById('imageCounter');
+        const fullscreenCounter = document.getElementById('fullscreenCounter');
+        
+        if (allPictures.length === 0) {
+            mainImg.src = 'https://via.placeholder.com/800x600?text=Pas+de+photo';
+            counter.textContent = '0 / 0';
+            return;
+        }
+        
+        const src = allPictures[currentImageIndex];
+        mainImg.src = src;
+        mainImg.onerror = function() { this.src = 'https://via.placeholder.com/800x600?text=Pas+de+photo'; };
+        
+        if (fullscreenImg) fullscreenImg.src = src;
+        
+        const counterText = `${currentImageIndex + 1} / ${allPictures.length}`;
+        counter.textContent = counterText;
+        if (fullscreenCounter) fullscreenCounter.textContent = counterText;
+        
+        // Update thumbnail selection
+        document.querySelectorAll('#thumbnails img').forEach((img, i) => {
+            img.classList.toggle('ring-2', i === currentImageIndex);
+            img.classList.toggle('ring-blue-500', i === currentImageIndex);
+        });
+    }
+    
+    function selectImageByIndex(index) {
+        currentImageIndex = index;
+        updateMainImage();
+    }
+    
+    function prevImage() {
+        if (allPictures.length === 0) return;
+        currentImageIndex = (currentImageIndex - 1 + allPictures.length) % allPictures.length;
+        updateMainImage();
+    }
+    
+    function nextImage() {
+        if (allPictures.length === 0) return;
+        currentImageIndex = (currentImageIndex + 1) % allPictures.length;
+        updateMainImage();
+    }
+    
+    function openFullscreen() {
+        if (allPictures.length === 0) return;
+        const modal = document.getElementById('fullscreenModal');
+        const img = document.getElementById('fullscreenImage');
+        img.src = allPictures[currentImageIndex];
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        lucide.createIcons();
+    }
+    
+    function closeFullscreen(event) {
+        if (event && event.target !== event.currentTarget) return;
+        const modal = document.getElementById('fullscreenModal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    
+    function getEnergyColor(cat) {
+        const colors = {
+            'A': 'bg-green-100 text-green-800',
+            'B': 'bg-lime-100 text-lime-800',
+            'C': 'bg-yellow-100 text-yellow-800',
+            'D': 'bg-orange-100 text-orange-800',
+            'E': 'bg-red-100 text-red-800',
+            'F': 'bg-red-200 text-red-900',
+            'G': 'bg-red-300 text-red-900',
+        };
+        return colors[cat] || 'bg-gray-100 text-gray-800';
+    }
+    
+    function getGHGColor(cat) {
+        const colors = {
+            'A': 'bg-purple-100 text-purple-800',
+            'B': 'bg-violet-100 text-violet-800',
+            'C': 'bg-indigo-100 text-indigo-800',
+            'D': 'bg-blue-100 text-blue-800',
+            'E': 'bg-cyan-100 text-cyan-800',
+            'F': 'bg-teal-100 text-teal-800',
+            'G': 'bg-gray-200 text-gray-800',
+        };
+        return colors[cat] || 'bg-gray-100 text-gray-800';
+    }
+    
+    function buildDPEGauge(category, value) {
+        const levels = [
+            { letter: 'A', color: '#319834', label: '≤ 70' },
+            { letter: 'B', color: '#33cc31', label: '71-110' },
+            { letter: 'C', color: '#cbfc34', label: '111-180' },
+            { letter: 'D', color: '#fbfe06', label: '181-250' },
+            { letter: 'E', color: '#fbcc05', label: '251-330' },
+            { letter: 'F', color: '#fc9935', label: '331-420' },
+            { letter: 'G', color: '#fc0205', label: '> 420' },
+        ];
+        
+        return levels.map((level, i) => {
+            const isActive = category === level.letter;
+            const width = 50 + (i * 8); // Progressive width
+            return `
+                <div class="flex items-center gap-1">
+                    <div class="relative flex items-center" style="width: ${width}%">
+                        <div class="h-6 flex items-center justify-between px-2 text-white text-xs font-bold rounded-r-md ${isActive ? 'ring-2 ring-gray-800 ring-offset-1' : ''}" 
+                             style="background-color: ${level.color}; width: 100%">
+                            <span>${level.letter}</span>
+                            ${isActive && value ? `<span class="text-[10px] font-normal">${value} kWh</span>` : ''}
+                        </div>
+                        ${isActive ? '<div class="absolute -right-2 w-0 h-0 border-t-[12px] border-b-[12px] border-l-[8px] border-transparent border-l-gray-800"></div>' : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    function buildGESGauge(category, value) {
+        const levels = [
+            { letter: 'A', color: '#f2eff4', label: '≤ 6' },
+            { letter: 'B', color: '#dfc1f2', label: '7-11' },
+            { letter: 'C', color: '#d5a5ee', label: '12-30' },
+            { letter: 'D', color: '#c989e9', label: '31-50' },
+            { letter: 'E', color: '#bc6de3', label: '51-70' },
+            { letter: 'F', color: '#a94ad8', label: '71-100' },
+            { letter: 'G', color: '#8b24c4', label: '> 100' },
+        ];
+        
+        return levels.map((level, i) => {
+            const isActive = category === level.letter;
+            const width = 50 + (i * 8);
+            const textColor = i < 3 ? '#6b21a8' : 'white';
+            return `
+                <div class="flex items-center gap-1">
+                    <div class="relative flex items-center" style="width: ${width}%">
+                        <div class="h-6 flex items-center justify-between px-2 text-xs font-bold rounded-r-md ${isActive ? 'ring-2 ring-gray-800 ring-offset-1' : ''}" 
+                             style="background-color: ${level.color}; color: ${textColor}; width: 100%">
+                            <span>${level.letter}</span>
+                            ${isActive && value ? `<span class="text-[10px] font-normal">${value} kg</span>` : ''}
+                        </div>
+                        ${isActive ? '<div class="absolute -right-2 w-0 h-0 border-t-[12px] border-b-[12px] border-l-[8px] border-transparent border-l-gray-800"></div>' : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    function getZonageColor(zone) {
+        const colors = {
+            'A': 'bg-red-100 text-red-800',
+            'Abis': 'bg-red-200 text-red-900',
+            'B1': 'bg-orange-100 text-orange-800',
+            'B2': 'bg-yellow-100 text-yellow-800',
+            'C': 'bg-green-100 text-green-800',
+        };
+        return colors[zone] || 'bg-gray-100 text-gray-800';
+    }
+    
+    function getZonageLabel(zone) {
+        const labels = {
+            'A': 'Zone très tendue',
+            'Abis': 'Zone très tendue (Paris)',
+            'B1': 'Zone tendue',
+            'B2': 'Zone moyennement tendue',
+            'C': 'Zone détendue',
+        };
+        return labels[zone] || '';
+    }
+    
+    // Descriptions des risques
+    const riskDescriptions = {
+        radon: {
+            title: "Radon",
+            description: "Le radon est un gaz radioactif naturel provenant du sol. Il peut s'accumuler dans les bâtiments et présente un risque pour la santé (2ème cause de cancer du poumon après le tabac).",
+            levels: {
+                "1": "Potentiel faible - La commune présente un potentiel radon de catégorie 1 (faible).",
+                "2": "Potentiel moyen - La commune présente un potentiel radon de catégorie 2 (moyen).",
+                "3": "Potentiel élevé - La commune présente un potentiel radon de catégorie 3 (élevé). Des mesures de dépistage sont recommandées."
+            },
+            link: "https://www.georisques.gouv.fr/risques/radon"
+        },
+        inondations: {
+            title: "Risque inondation",
+            description: "Zone exposée aux inondations par débordement de cours d'eau, ruissellement, submersion marine ou remontée de nappe phréatique.",
+            link: "https://www.georisques.gouv.fr/risques/inondations"
+        },
+        argiles: {
+            title: "Retrait-gonflement des argiles",
+            description: "Les sols argileux se rétractent en période sèche et gonflent en période humide. Ces mouvements peuvent provoquer des fissures sur les bâtiments.",
+            levels: {
+                "faible": "Exposition faible - Risque limité de mouvements de terrain.",
+                "moyen": "Exposition moyenne - Risque modéré. Des précautions constructives sont recommandées.",
+                "fort": "Exposition forte - Risque élevé. Des études géotechniques et des fondations adaptées sont nécessaires."
+            },
+            link: "https://www.georisques.gouv.fr/risques/retrait-gonflement-des-argiles"
+        },
+        cavites: {
+            title: "Cavités souterraines",
+            description: "Présence de cavités naturelles (grottes, gouffres) ou artificielles (carrières, caves, ouvrages militaires) pouvant provoquer des effondrements.",
+            link: "https://www.georisques.gouv.fr/risques/cavites-souterraines"
+        },
+        mouvements_terrain: {
+            title: "Mouvements de terrain",
+            description: "Glissements de terrain, éboulements, coulées de boue ou effondrements survenus dans le secteur.",
+            link: "https://www.georisques.gouv.fr/risques/mouvements-de-terrain"
+        },
+        installations_classees: {
+            title: "Installations classées (ICPE)",
+            description: "Installations industrielles ou agricoles soumises à autorisation en raison des risques ou nuisances qu'elles peuvent générer (pollution, explosion, incendie).",
+            link: "https://www.georisques.gouv.fr/risques/installations-industrielles"
+        },
+        sols_pollues: {
+            title: "Sites pollués (SIS)",
+            description: "Secteurs d'Information sur les Sols : terrains où la pollution est connue et nécessite une vigilance particulière en cas de changement d'usage.",
+            link: "https://www.georisques.gouv.fr/risques/pollutions-sols-sis-anciens-sites-industriels"
+        },
+        catnat: {
+            title: "Catastrophes naturelles (CatNat)",
+            description: "Arrêtés de reconnaissance de l'état de catastrophe naturelle pris sur la commune, permettant l'indemnisation des dommages par les assurances.",
+            link: "https://www.georisques.gouv.fr/risques/catastrophes-naturelles"
+        }
+    };
+    
+    function toggleRiskDetails(id) {
+        const details = document.getElementById(id);
+        if (details) {
+            details.classList.toggle('hidden');
+        }
+    }
+    
+    function displayGeorisques(georisques) {
+        const section = document.getElementById('georisquesSection');
+        const content = document.getElementById('georisquesContent');
+        
+        let hasRisks = false;
+        let html = '';
+        
+        // Risques de la commune (résumé)
+        if (georisques.risques_commune?.data?.length > 0) {
+            const risquesDetail = georisques.risques_commune.data[0]?.risques_detail || [];
+            if (risquesDetail.length > 0) {
+                hasRisks = true;
+                html += `
+                    <div class="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                        <div class="font-medium text-slate-800 mb-2">Risques identifiés sur la commune</div>
+                        <div class="flex flex-wrap gap-2">
+                            ${risquesDetail.map(r => `<span class="px-2 py-1 text-xs rounded bg-slate-200 text-slate-700">${r.libelle_risque_long}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Radon
+        if (georisques.radon?.data?.length > 0) {
+            hasRisks = true;
+            const radon = georisques.radon.data[0];
+            const level = radon.classe_potentiel || '?';
+            const levelDesc = riskDescriptions.radon.levels[level] || '';
+            html += `
+                <div class="rounded-lg bg-yellow-50 border border-yellow-200 overflow-hidden">
+                    <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-yellow-100 transition" onclick="toggleRiskDetails('radon-details')">
+                        <span class="font-medium text-yellow-800 flex items-center gap-2">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>Radon
+                        </span>
+                        <span class="px-2 py-1 text-xs rounded bg-yellow-200 text-yellow-800">Niveau ${level}</span>
+                    </div>
+                    <div id="radon-details" class="hidden px-3 pb-3 text-sm text-yellow-900 border-t border-yellow-200 pt-2">
+                        <p class="mb-2">${riskDescriptions.radon.description}</p>
+                        <p class="font-medium mb-2">${levelDesc}</p>
+                        <a href="${riskDescriptions.radon.link}" target="_blank" class="text-yellow-700 hover:underline flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Inondations
+        if (georisques.inondations?.data?.length > 0) {
+            hasRisks = true;
+            const zones = georisques.inondations.data;
+            html += `
+                <div class="rounded-lg bg-blue-50 border border-blue-200 overflow-hidden">
+                    <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-blue-100 transition" onclick="toggleRiskDetails('inondation-details')">
+                        <span class="font-medium text-blue-800 flex items-center gap-2">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>Risque inondation
+                        </span>
+                        <span class="px-2 py-1 text-xs rounded bg-blue-200 text-blue-800">${zones.length} zone(s)</span>
+                    </div>
+                    <div id="inondation-details" class="hidden px-3 pb-3 text-sm text-blue-900 border-t border-blue-200 pt-2">
+                        <p class="mb-2">${riskDescriptions.inondations.description}</p>
+                        <ul class="list-disc list-inside mb-2 space-y-1">
+                            ${zones.slice(0, 5).map(z => `<li>${z.libelle_azi || 'Zone inondable'}</li>`).join('')}
+                        </ul>
+                        <a href="${riskDescriptions.inondations.link}" target="_blank" class="text-blue-700 hover:underline flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Argiles (RGA)
+        if (georisques.argiles?.data?.length > 0) {
+            hasRisks = true;
+            const argile = georisques.argiles.data[0];
+            const exposition = argile.exposition || argile.niveau_alea || '?';
+            const expLower = exposition.toLowerCase();
+            const bgColor = expLower.includes('fort') ? 'bg-red-50 border-red-200' : 
+                           expLower.includes('moyen') ? 'bg-amber-50 border-amber-200' : 
+                           'bg-green-50 border-green-200';
+            const textColor = expLower.includes('fort') ? 'text-red-800' : 
+                             expLower.includes('moyen') ? 'text-amber-800' : 
+                             'text-green-800';
+            const badgeColor = expLower.includes('fort') ? 'bg-red-200 text-red-800' : 
+                              expLower.includes('moyen') ? 'bg-amber-200 text-amber-800' : 
+                              'bg-green-200 text-green-800';
+            const levelKey = expLower.includes('fort') ? 'fort' : expLower.includes('moyen') ? 'moyen' : 'faible';
+            html += `
+                <div class="rounded-lg ${bgColor} overflow-hidden">
+                    <div class="p-3 flex items-center justify-between cursor-pointer hover:opacity-80 transition" onclick="toggleRiskDetails('argiles-details')">
+                        <span class="font-medium ${textColor} flex items-center gap-2">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>Retrait-gonflement argiles
+                        </span>
+                        <span class="px-2 py-1 text-xs rounded ${badgeColor}">${exposition}</span>
+                    </div>
+                    <div id="argiles-details" class="hidden px-3 pb-3 text-sm ${textColor} border-t pt-2" style="border-color: inherit;">
+                        <p class="mb-2">${riskDescriptions.argiles.description}</p>
+                        <p class="font-medium mb-2">${riskDescriptions.argiles.levels[levelKey] || ''}</p>
+                        <a href="${riskDescriptions.argiles.link}" target="_blank" class="hover:underline flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Cavités
+        if (georisques.cavites?.data?.length > 0) {
+            hasRisks = true;
+            const cavites = georisques.cavites.data;
+            html += `
+                <div class="rounded-lg bg-gray-50 border border-gray-200 overflow-hidden">
+                    <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition" onclick="toggleRiskDetails('cavites-details')">
+                        <span class="font-medium text-gray-800 flex items-center gap-2">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>Cavités souterraines
+                        </span>
+                        <span class="px-2 py-1 text-xs rounded bg-gray-200 text-gray-800">${cavites.length} à proximité</span>
+                    </div>
+                    <div id="cavites-details" class="hidden px-3 pb-3 text-sm text-gray-700 border-t border-gray-200 pt-2">
+                        <p class="mb-2">${riskDescriptions.cavites.description}</p>
+                        <ul class="list-disc list-inside mb-2 space-y-1">
+                            ${cavites.slice(0, 5).map(c => `<li>${c.nom || c.type || 'Cavité'} (${c.type || 'type inconnu'})</li>`).join('')}
+                        </ul>
+                        <a href="${riskDescriptions.cavites.link}" target="_blank" class="text-gray-600 hover:underline flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Mouvements de terrain
+        if (georisques.mouvements_terrain?.data?.length > 0) {
+            hasRisks = true;
+            const mvts = georisques.mouvements_terrain.data;
+            html += `
+                <div class="rounded-lg bg-stone-50 border border-stone-200 overflow-hidden">
+                    <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-stone-100 transition" onclick="toggleRiskDetails('mvt-details')">
+                        <span class="font-medium text-stone-800 flex items-center gap-2">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>Mouvements de terrain
+                        </span>
+                        <span class="px-2 py-1 text-xs rounded bg-stone-200 text-stone-800">${mvts.length} événement(s)</span>
+                    </div>
+                    <div id="mvt-details" class="hidden px-3 pb-3 text-sm text-stone-700 border-t border-stone-200 pt-2">
+                        <p class="mb-2">${riskDescriptions.mouvements_terrain.description}</p>
+                        <a href="${riskDescriptions.mouvements_terrain.link}" target="_blank" class="text-stone-600 hover:underline flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Installations classées
+        if (georisques.installations_classees?.data?.length > 0) {
+            hasRisks = true;
+            const icpe = georisques.installations_classees.data;
+            const seveso = icpe.filter(i => i.statutSeveso && i.statutSeveso !== 'Non Seveso');
+            html += `
+                <div class="rounded-lg bg-red-50 border border-red-200 overflow-hidden">
+                    <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-red-100 transition" onclick="toggleRiskDetails('icpe-details')">
+                        <span class="font-medium text-red-800 flex items-center gap-2">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>Installations classées (ICPE)
+                        </span>
+                        <span class="px-2 py-1 text-xs rounded bg-red-200 text-red-800">${icpe.length} à proximité${seveso.length > 0 ? ' dont ' + seveso.length + ' Seveso' : ''}</span>
+                    </div>
+                    <div id="icpe-details" class="hidden px-3 pb-3 text-sm text-red-900 border-t border-red-200 pt-2">
+                        <p class="mb-2">${riskDescriptions.installations_classees.description}</p>
+                        <ul class="list-disc list-inside mb-2 space-y-1">
+                            ${icpe.slice(0, 5).map(i => `<li>${i.raisonSociale || 'Installation'} - ${i.statutSeveso || 'Non Seveso'}</li>`).join('')}
+                        </ul>
+                        <a href="${riskDescriptions.installations_classees.link}" target="_blank" class="text-red-700 hover:underline flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Sols pollués
+        if (georisques.sols_pollues?.data?.length > 0) {
+            hasRisks = true;
+            const sis = georisques.sols_pollues.data;
+            html += `
+                <div class="rounded-lg bg-purple-50 border border-purple-200 overflow-hidden">
+                    <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-purple-100 transition" onclick="toggleRiskDetails('sis-details')">
+                        <span class="font-medium text-purple-800 flex items-center gap-2">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>Sites pollués (SIS)
+                        </span>
+                        <span class="px-2 py-1 text-xs rounded bg-purple-200 text-purple-800">${sis.length} à proximité</span>
+                    </div>
+                    <div id="sis-details" class="hidden px-3 pb-3 text-sm text-purple-900 border-t border-purple-200 pt-2">
+                        <p class="mb-2">${riskDescriptions.sols_pollues.description}</p>
+                        <a href="${riskDescriptions.sols_pollues.link}" target="_blank" class="text-purple-700 hover:underline flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // CatNat
+        if (georisques.catnat?.data?.length > 0) {
+            hasRisks = true;
+            const catnat = georisques.catnat.data;
+            // Group by risk type
+            const byType = {};
+            catnat.forEach(c => {
+                const type = c.libelle_risque_jo || 'Autre';
+                byType[type] = (byType[type] || 0) + 1;
+            });
+            html += `
+                <div class="rounded-lg bg-indigo-50 border border-indigo-200 overflow-hidden">
+                    <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-indigo-100 transition" onclick="toggleRiskDetails('catnat-details')">
+                        <span class="font-medium text-indigo-800 flex items-center gap-2">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>Arrêtés CatNat
+                        </span>
+                        <span class="px-2 py-1 text-xs rounded bg-indigo-200 text-indigo-800">${catnat.length} déclaration(s)</span>
+                    </div>
+                    <div id="catnat-details" class="hidden px-3 pb-3 text-sm text-indigo-900 border-t border-indigo-200 pt-2">
+                        <p class="mb-2">${riskDescriptions.catnat.description}</p>
+                        <div class="mb-2">
+                            <p class="font-medium mb-1">Répartition par type :</p>
+                            <ul class="list-disc list-inside space-y-1">
+                                ${Object.entries(byType).map(([type, count]) => `<li>${type}: ${count} arrêté(s)</li>`).join('')}
+                            </ul>
+                        </div>
+                        <p class="text-xs text-indigo-600 mb-2">Dernier arrêté : ${catnat[0]?.date_publication_jo || 'N/A'}</p>
+                        <a href="${riskDescriptions.catnat.link}" target="_blank" class="text-indigo-700 hover:underline flex items-center gap-1">
+                            <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (hasRisks) {
+            section.classList.remove('hidden');
+            content.innerHTML = html;
+            lucide.createIcons();
+        } else {
+            section.classList.remove('hidden');
+            content.innerHTML = '<p class="text-green-600 flex items-center"><i data-lucide="check-circle" class="w-5 h-5 mr-2"></i>Aucun risque majeur identifié</p>';
+            lucide.createIcons();
+        }
+    }
+    
+    function initMap(locations) {
+        if (!locations?.lat || !locations?.lon) return;
+        
+        map = L.map('map').setView([locations.lat, locations.lon], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Property marker (red, larger)
+        const propertyIcon = L.divIcon({
+            html: '<div class="w-8 h-8 bg-red-600 border-2 border-white rounded-full shadow-lg flex items-center justify-center"><svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg></div>',
+            className: '',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+        L.marker([locations.lat, locations.lon], { icon: propertyIcon }).addTo(map)
+            .bindPopup('<strong>Ce bien</strong>');
+        
+        // Load POIs
+        loadPOIs(locations.lat, locations.lon);
+    }
+    
+    async function loadPOIs(lat, lon) {
+        document.getElementById('poiLoading').classList.remove('hidden');
+        
+        const radius = 500; // 500 meters
+        const query = `
+            [out:json][timeout:10];
+            (
+                node["amenity"~"school|kindergarten"](around:${radius},${lat},${lon});
+                node["amenity"~"pharmacy|doctors|hospital|clinic"](around:${radius},${lat},${lon});
+                node["shop"~"supermarket|bakery|convenience"](around:${radius},${lat},${lon});
+                node["amenity"~"restaurant|cafe|bar"](around:${radius},${lat},${lon});
+                node["leisure"~"park|playground|sports_centre|fitness_centre"](around:${radius},${lat},${lon});
+                node["railway"="station"](around:${radius},${lat},${lon});
+                node["highway"="bus_stop"](around:${radius},${lat},${lon});
+                node["amenity"="bus_station"](around:${radius},${lat},${lon});
+                node["railway"="tram_stop"](around:${radius},${lat},${lon});
+                node["station"="subway"](around:${radius},${lat},${lon});
+            );
+            out body;
+        `;
+        
+        try {
+            const response = await fetch('https://overpass-api.de/api/interpreter', {
+                method: 'POST',
+                body: query
+            });
+            const data = await response.json();
+            
+            if (data.elements && data.elements.length > 0) {
+                cachedPOIs = data.elements; // Cache for fullscreen map
+                displayPOIs(data.elements, map);
+                document.getElementById('poiLegend').classList.remove('hidden');
+            }
+        } catch (e) {
+            console.error('Error loading POIs:', e);
+        } finally {
+            document.getElementById('poiLoading').classList.add('hidden');
+        }
+    }
+    
+    const poiConfig = {
+        // Transport
+        'bus_stop': { color: '#3b82f6', icon: '🚌', label: 'Arrêt de bus' },
+        'bus_station': { color: '#3b82f6', icon: '🚌', label: 'Gare routière' },
+        'station': { color: '#3b82f6', icon: '🚇', label: 'Métro' },
+        'subway': { color: '#3b82f6', icon: '🚇', label: 'Métro' },
+        'tram_stop': { color: '#3b82f6', icon: '🚊', label: 'Tramway' },
+        'railway_station': { color: '#3b82f6', icon: '🚆', label: 'Gare' },
+        // Schools
+        'school': { color: '#eab308', icon: '🏫', label: 'École' },
+        'kindergarten': { color: '#eab308', icon: '👶', label: 'Maternelle' },
+        // Commerce
+        'supermarket': { color: '#22c55e', icon: '🛒', label: 'Supermarché' },
+        'bakery': { color: '#22c55e', icon: '🥖', label: 'Boulangerie' },
+        'convenience': { color: '#22c55e', icon: '🏪', label: 'Épicerie' },
+        'restaurant': { color: '#22c55e', icon: '🍽️', label: 'Restaurant' },
+        'cafe': { color: '#22c55e', icon: '☕', label: 'Café' },
+        'bar': { color: '#22c55e', icon: '🍺', label: 'Bar' },
+        // Health
+        'pharmacy': { color: '#ef4444', icon: '💊', label: 'Pharmacie' },
+        'doctors': { color: '#ef4444', icon: '👨‍⚕️', label: 'Médecin' },
+        'hospital': { color: '#ef4444', icon: '🏥', label: 'Hôpital' },
+        'clinic': { color: '#ef4444', icon: '🏥', label: 'Clinique' },
+        // Leisure
+        'park': { color: '#a855f7', icon: '🌳', label: 'Parc' },
+        'playground': { color: '#a855f7', icon: '🎠', label: 'Aire de jeux' },
+        'sports_centre': { color: '#a855f7', icon: '🏋️', label: 'Centre sportif' },
+        'fitness_centre': { color: '#a855f7', icon: '🏋️', label: 'Salle de sport' },
+    };
+    
+    function displayPOIs(pois, targetMap) {
+        pois.forEach(poi => {
+            const type = poi.tags?.amenity || poi.tags?.shop || poi.tags?.leisure || 
+                        poi.tags?.highway || poi.tags?.railway || poi.tags?.station;
+            
+            // Special case for railway station
+            const configKey = poi.tags?.railway === 'station' ? 'railway_station' : type;
+            const config = poiConfig[configKey];
+            
+            if (config && poi.lat && poi.lon) {
+                const icon = L.divIcon({
+                    html: `<div class="w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md" style="background-color: ${config.color}">${config.icon}</div>`,
+                    className: '',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                
+                const name = poi.tags?.name || config.label;
+                L.marker([poi.lat, poi.lon], { icon })
+                    .addTo(targetMap)
+                    .bindPopup(`<strong>${config.label}</strong><br>${name !== config.label ? name : ''}`);
+            }
+        });
+    }
+    
+    function openMapFullscreen() {
+        const modal = document.getElementById('mapFullscreenModal');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        // Get property location
+        const loc = propertyData?.location || propertyData?.city?.location;
+        if (!loc) return;
+        
+        // Initialize fullscreen map if not already done
+        if (!fullscreenMap) {
+            fullscreenMap = L.map('fullscreenMap').setView([loc.lat, loc.lon], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(fullscreenMap);
+            
+            // Property marker
+            const propertyIcon = L.divIcon({
+                html: '<div class="w-10 h-10 bg-red-600 border-2 border-white rounded-full shadow-lg flex items-center justify-center"><svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg></div>',
+                className: '',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+            L.marker([loc.lat, loc.lon], { icon: propertyIcon }).addTo(fullscreenMap)
+                .bindPopup('<strong>Ce bien</strong>');
+            
+            // Add cached POIs
+            if (cachedPOIs.length > 0) {
+                displayPOIs(cachedPOIs, fullscreenMap);
+            }
+        }
+        
+        // Fix map size after modal is visible
+        setTimeout(() => {
+            fullscreenMap.invalidateSize();
+        }, 100);
+        
+        lucide.createIcons();
+    }
+    
+    function closeMapFullscreen() {
+        const modal = document.getElementById('mapFullscreenModal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    
+    function updateFavoriteButton() {
+        const btn = document.getElementById('favoriteBtn');
+        if (!btn) return;
+        
+        // Lucide transforms <i> to <svg>, so we need to find either
+        const icon = btn.querySelector('svg') || btn.querySelector('i');
+        if (!icon) return;
+        
+        if (favoriteData) {
+            icon.classList.add('text-red-500');
+            icon.style.fill = '#ef4444';
+        } else {
+            icon.classList.remove('text-red-500');
+            icon.style.fill = 'none';
+        }
+    }
+    
+    async function togglePropertyFavorite() {
+        const btn = document.getElementById('favoriteBtn');
+        
+        if (favoriteData) {
+            // Remove from favorites
+            const response = await fetch(`/api/favorites/${propertyUuid}`, { method: 'DELETE' });
+            if (response.ok) {
+                favoriteData = null;
+                updateFavoriteButton();
+                
+                // Hide enrichment sections
+                document.getElementById('zonageSection').classList.add('hidden');
+                document.getElementById('georisquesSection').classList.add('hidden');
+                
+                showToast('Retiré des favoris');
+                lucide.createIcons();
+            }
+        } else {
+            // Add to favorites
+            const response = await fetch('/api/favorites/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({property_uuid: propertyUuid})
+            });
+            
+            if (response.ok) {
+                favoriteData = await response.json();
+                updateFavoriteButton();
+                
+                // Show enrichment data
+                if (favoriteData.zonage_abc) {
+                    document.getElementById('zonageSection').classList.remove('hidden');
+                    document.getElementById('zonageContent').innerHTML = `
+                        <div class="inline-block px-6 py-3 rounded-lg ${getZonageColor(favoriteData.zonage_abc)}">
+                            <div class="text-3xl font-bold">${favoriteData.zonage_abc}</div>
+                            <div class="text-sm">${getZonageLabel(favoriteData.zonage_abc)}</div>
+                        </div>
+                    `;
+                }
+                
+                if (favoriteData.georisques) {
+                    displayGeorisques(favoriteData.georisques);
+                }
+                
+                showToast('Ajouté aux favoris avec enrichissement');
+                lucide.createIcons();
+            } else {
+                const data = await response.json();
+                showToast(data.detail || 'Erreur', 'error');
+            }
+        }
+    }
+</script>
+{% endblock %}

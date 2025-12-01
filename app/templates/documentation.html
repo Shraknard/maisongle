@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}Documentation - Maisongle{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+    <div class="bg-white rounded-xl shadow-sm p-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Documentation</h1>
+        <p class="text-gray-500 mb-8">Guide complet des fonctionnalités de Maisongle</p>
+        
+        <!-- Table of contents -->
+        <div class="bg-gray-50 rounded-lg p-6 mb-8">
+            <h2 class="font-semibold text-gray-900 mb-3">Sommaire</h2>
+            <ul class="space-y-2 text-sm">
+                <li><a href="#sources" class="text-blue-600 hover:underline">1. Sources de données</a></li>
+                <li><a href="#search" class="text-blue-600 hover:underline">2. Recherche d'annonces</a></li>
+                <li><a href="#price-indicator" class="text-blue-600 hover:underline">3. Indicateur de prix</a></li>
+                <li><a href="#map" class="text-blue-600 hover:underline">4. Cartes et POI</a></li>
+                <li><a href="#favorites" class="text-blue-600 hover:underline">5. Favoris et enrichissement</a></li>
+                <li><a href="#calculator" class="text-blue-600 hover:underline">6. Simulateur de prêt</a></li>
+                <li><a href="#dpe" class="text-blue-600 hover:underline">7. DPE et GES</a></li>
+            </ul>
+        </div>
+        
+        <!-- Sources -->
+        <section id="sources" class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <i data-lucide="database" class="w-6 h-6 mr-2 text-blue-600"></i>
+                1. Sources de données
+            </h2>
+            
+            <div class="space-y-4">
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <h3 class="font-semibold text-gray-900">Melo.io (Annonces immobilières)</h3>
+                    <p class="text-gray-600 text-sm mt-1">
+                        API agrégateur qui collecte les annonces de multiples sources : Leboncoin, SeLoger, PAP, Logic-Immo, 
+                        Bien'ici, Orpi, Century 21, Laforêt, Figaro Immo, etc.
+                    </p>
+                    <p class="text-gray-500 text-xs mt-2">
+                        <strong>URL :</strong> <code class="bg-gray-100 px-1 rounded">https://api.notif.immo</code><br>
+                        <strong>Coût :</strong> ~30€/mois<br>
+                        <strong>Documentation :</strong> <a href="https://www.melo.io" target="_blank" class="text-blue-600 hover:underline">melo.io</a>
+                    </p>
+                </div>
+                
+                <div class="border-l-4 border-green-500 pl-4">
+                    <h3 class="font-semibold text-gray-900">DVF (Demandes de Valeurs Foncières)</h3>
+                    <p class="text-gray-600 text-sm mt-1">
+                        Données officielles des transactions immobilières en France, publiées par la DGFiP. 
+                        Utilisées pour calculer le prix moyen au m² par commune.
+                    </p>
+                    <p class="text-gray-500 text-xs mt-2">
+                        <strong>Source :</strong> <a href="https://www.data.gouv.fr/datasets/indicateurs-immobiliers-par-commune-et-par-annee-prix-et-volumes-sur-la-periode-2014-2024" target="_blank" class="text-blue-600 hover:underline">data.gouv.fr</a><br>
+                        <strong>Données :</strong> ~30 000 communes<br>
+                        <strong>Mise à jour :</strong> Annuelle (2024)
+                    </p>
+                </div>
+                
+                <div class="border-l-4 border-yellow-500 pl-4">
+                    <h3 class="font-semibold text-gray-900">Zonage Pinel (ABC)</h3>
+                    <p class="text-gray-600 text-sm mt-1">
+                        Classification des communes selon la tension du marché immobilier, utilisée pour le dispositif Pinel.
+                    </p>
+                    <p class="text-gray-500 text-xs mt-2">
+                        <strong>Zones :</strong> A bis (Paris), A (grandes agglomérations), B1, B2, C (zones détendues)<br>
+                        <strong>Données :</strong> ~35 000 communes
+                    </p>
+                </div>
+                
+                <div class="border-l-4 border-red-500 pl-4">
+                    <h3 class="font-semibold text-gray-900">Géorisques</h3>
+                    <p class="text-gray-600 text-sm mt-1">
+                        API officielle du Ministère de la Transition Écologique pour les risques naturels et technologiques.
+                    </p>
+                    <p class="text-gray-500 text-xs mt-2">
+                        <strong>URL :</strong> <code class="bg-gray-100 px-1 rounded">https://georisques.gouv.fr/api/v1</code><br>
+                        <strong>Documentation :</strong> <a href="https://www.georisques.gouv.fr/doc-api" target="_blank" class="text-blue-600 hover:underline">georisques.gouv.fr/doc-api</a>
+                    </p>
+                </div>
+                
+                <div class="border-l-4 border-purple-500 pl-4">
+                    <h3 class="font-semibold text-gray-900">OpenStreetMap / Overpass API (POI)</h3>
+                    <p class="text-gray-600 text-sm mt-1">
+                        Données cartographiques libres pour les points d'intérêt : transports, écoles, commerces, santé, loisirs.
+                    </p>
+                    <p class="text-gray-500 text-xs mt-2">
+                        <strong>URL :</strong> <code class="bg-gray-100 px-1 rounded">https://overpass-api.de/api/interpreter</code><br>
+                        <strong>Licence :</strong> ODbL (libre)
+                    </p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Search -->
+        <section id="search" class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <i data-lucide="search" class="w-6 h-6 mr-2 text-blue-600"></i>
+                2. Recherche d'annonces
+            </h2>
+            
+            <div class="prose prose-sm max-w-none text-gray-600">
+                <h3 class="text-lg font-semibold text-gray-900">Fonctionnement</h3>
+                <p>
+                    La recherche interroge l'API Melo.io en temps réel. Les annonces sont filtrées selon vos critères 
+                    et affichées avec pagination (50 résultats par page).
+                </p>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Rayon de recherche</h3>
+                <p>
+                    Quand activé, la recherche utilise les coordonnées GPS de la ville sélectionnée et cherche 
+                    dans un rayon de 1 à 100 km. Cela permet de trouver des biens dans les communes environnantes.
+                </p>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Autocomplete des villes</h3>
+                <p>
+                    L'autocomplétion utilise l'endpoint <code>/cities</code> de Melo.io qui retourne les villes 
+                    correspondant à votre saisie avec leurs coordonnées GPS et code INSEE.
+                </p>
+            </div>
+        </section>
+        
+        <!-- Price indicator -->
+        <section id="price-indicator" class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <i data-lucide="trending-up" class="w-6 h-6 mr-2 text-blue-600"></i>
+                3. Indicateur de prix
+            </h2>
+            
+            <div class="prose prose-sm max-w-none text-gray-600">
+                <h3 class="text-lg font-semibold text-gray-900">Calcul</h3>
+                <p>L'indicateur compare le prix au m² du bien avec la moyenne de la commune :</p>
+                
+                <div class="bg-gray-50 rounded-lg p-4 my-4 font-mono text-sm">
+                    ratio = (prix_bien / surface_bien) / prix_m2_moyen_commune
+                </div>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Interprétation</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="flex items-center gap-1 px-2 py-0.5 rounded bg-green-100 text-green-600 text-xs font-medium">
+                                <i data-lucide="trending-down" class="w-3 h-3"></i>-X%
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-600">
+                            <strong>Ratio &lt; 0.85</strong><br>
+                            Prix inférieur de plus de 15% à la moyenne. Potentiellement une bonne affaire.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">
+                                <i data-lucide="minus" class="w-3 h-3"></i>≈
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-600">
+                            <strong>0.85 ≤ Ratio ≤ 1.15</strong><br>
+                            Prix dans la moyenne du marché local (±15%).
+                        </p>
+                    </div>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-600 text-xs font-medium">
+                                <i data-lucide="trending-up" class="w-3 h-3"></i>+X%
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-600">
+                            <strong>Ratio &gt; 1.15</strong><br>
+                            Prix supérieur de plus de 15% à la moyenne. Peut être justifié par des prestations.
+                        </p>
+                    </div>
+                </div>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Cas particuliers : Paris, Lyon, Marseille</h3>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 my-4">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="info" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                        <div class="text-sm text-blue-900">
+                            <p class="font-medium mb-1">Données agrégées par ville</p>
+                            <p>Pour Paris, Lyon et Marseille, les données DVF ne sont pas disponibles par arrondissement. 
+                            Le prix moyen affiché correspond à l'ensemble de la ville :</p>
+                            <ul class="list-disc pl-5 mt-2 space-y-1">
+                                <li><strong>Paris</strong> (75001-75020) → moyenne sur tout Paris</li>
+                                <li><strong>Lyon</strong> (69001-69009) → moyenne sur tout Lyon</li>
+                                <li><strong>Marseille</strong> (13001-13016) → moyenne sur tout Marseille</li>
+                            </ul>
+                            <p class="mt-2 text-blue-700">Un indicateur <i data-lucide="info" class="w-3 h-3 inline"></i> signale cette particularité sur les annonces concernées.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Limites</h3>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>La moyenne communale ne distingue pas les quartiers</li>
+                    <li>Ne prend pas en compte l'état du bien, l'étage, l'exposition, etc.</li>
+                    <li>Données DVF basées sur les transactions de l'année précédente</li>
+                    <li>Certaines petites communes ont peu de transactions (données moins fiables)</li>
+                    <li>Pour Paris/Lyon/Marseille, la moyenne est sur toute la ville (voir ci-dessus)</li>
+                </ul>
+            </div>
+        </section>
+        
+        <!-- Map -->
+        <section id="map" class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <i data-lucide="map" class="w-6 h-6 mr-2 text-blue-600"></i>
+                4. Cartes et Points d'Intérêt
+            </h2>
+            
+            <div class="prose prose-sm max-w-none text-gray-600">
+                <h3 class="text-lg font-semibold text-gray-900">Technologie</h3>
+                <p>
+                    Les cartes utilisent <strong>Leaflet.js</strong> avec les tuiles <strong>OpenStreetMap</strong>.
+                    Les POI sont chargés via l'<strong>API Overpass</strong> dans un rayon de 500m à 1km.
+                </p>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Catégories de POI</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 my-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-blue-500"></span>
+                        <span class="text-sm">Transport</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-yellow-500"></span>
+                        <span class="text-sm">Écoles</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-green-500"></span>
+                        <span class="text-sm">Commerces</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-red-500"></span>
+                        <span class="text-sm">Santé</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-purple-500"></span>
+                        <span class="text-sm">Loisirs</span>
+                    </div>
+                </div>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">POI inclus</h3>
+                <ul class="list-disc pl-5 space-y-1 text-sm">
+                    <li><strong>Transport :</strong> Gares, arrêts de bus, métro, tramway</li>
+                    <li><strong>Écoles :</strong> Maternelles, écoles, collèges, universités</li>
+                    <li><strong>Commerces :</strong> Supermarchés, épiceries, boulangeries</li>
+                    <li><strong>Santé :</strong> Pharmacies, médecins, hôpitaux, cliniques</li>
+                    <li><strong>Loisirs :</strong> Parcs, centres sportifs, cinémas, restaurants</li>
+                </ul>
+            </div>
+        </section>
+        
+        <!-- Favorites -->
+        <section id="favorites" class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <i data-lucide="heart" class="w-6 h-6 mr-2 text-blue-600"></i>
+                5. Favoris et enrichissement
+            </h2>
+            
+            <div class="prose prose-sm max-w-none text-gray-600">
+                <h3 class="text-lg font-semibold text-gray-900">Stockage</h3>
+                <p>
+                    Les favoris sont stockés en base de données PostgreSQL avec toutes les informations 
+                    de l'annonce (prix, surface, photos, contact, etc.) pour un accès hors-ligne.
+                </p>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Enrichissement automatique</h3>
+                <p>Lors de l'ajout en favoris, les données suivantes sont récupérées :</p>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li><strong>Zonage Pinel :</strong> Zone A bis, A, B1, B2 ou C</li>
+                    <li><strong>Géorisques :</strong> Risques naturels et technologiques (si disponible)</li>
+                </ul>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Zonage Pinel</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-2 my-4 text-xs">
+                    <div class="bg-red-100 text-red-800 px-3 py-2 rounded text-center">
+                        <strong>A bis</strong><br>Paris
+                    </div>
+                    <div class="bg-orange-100 text-orange-800 px-3 py-2 rounded text-center">
+                        <strong>A</strong><br>Grandes agglos
+                    </div>
+                    <div class="bg-yellow-100 text-yellow-800 px-3 py-2 rounded text-center">
+                        <strong>B1</strong><br>Agglos moyennes
+                    </div>
+                    <div class="bg-green-100 text-green-800 px-3 py-2 rounded text-center">
+                        <strong>B2</strong><br>Petites villes
+                    </div>
+                    <div class="bg-gray-100 text-gray-800 px-3 py-2 rounded text-center">
+                        <strong>C</strong><br>Zones détendues
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Calculator -->
+        <section id="calculator" class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <i data-lucide="calculator" class="w-6 h-6 mr-2 text-blue-600"></i>
+                6. Simulateur de prêt
+            </h2>
+            
+            <div class="prose prose-sm max-w-none text-gray-600">
+                <h3 class="text-lg font-semibold text-gray-900">Formule de calcul</h3>
+                <p>La mensualité est calculée avec la formule d'annuité constante :</p>
+                
+                <div class="bg-gray-50 rounded-lg p-4 my-4 font-mono text-sm overflow-x-auto">
+                    M = C × (t × (1 + t)^n) / ((1 + t)^n - 1)
+                </div>
+                
+                <p class="text-sm">
+                    Où : <strong>M</strong> = mensualité, <strong>C</strong> = capital emprunté, 
+                    <strong>t</strong> = taux mensuel (taux annuel / 12), <strong>n</strong> = nombre de mensualités
+                </p>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Paramètres</h3>
+                <table class="w-full text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="border px-3 py-2 text-left">Paramètre</th>
+                            <th class="border px-3 py-2 text-left">Défaut</th>
+                            <th class="border px-3 py-2 text-left">Plage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="border px-3 py-2">Frais de notaire</td>
+                            <td class="border px-3 py-2">8%</td>
+                            <td class="border px-3 py-2">0-12% (3% neuf, 8% ancien)</td>
+                        </tr>
+                        <tr>
+                            <td class="border px-3 py-2">Apport</td>
+                            <td class="border px-3 py-2">20%</td>
+                            <td class="border px-3 py-2">0-50%</td>
+                        </tr>
+                        <tr>
+                            <td class="border px-3 py-2">Durée</td>
+                            <td class="border px-3 py-2">20 ans</td>
+                            <td class="border px-3 py-2">5-30 ans</td>
+                        </tr>
+                        <tr>
+                            <td class="border px-3 py-2">Taux d'intérêt</td>
+                            <td class="border px-3 py-2">3.5%</td>
+                            <td class="border px-3 py-2">0.5-8%</td>
+                        </tr>
+                        <tr>
+                            <td class="border px-3 py-2">Assurance</td>
+                            <td class="border px-3 py-2">0.3%</td>
+                            <td class="border px-3 py-2">0-1% du capital/an</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Tableau d'amortissement</h3>
+                <p>
+                    Le tableau montre année par année : le capital remboursé, les intérêts payés, 
+                    l'assurance et le capital restant dû.
+                </p>
+            </div>
+        </section>
+        
+        <!-- DPE -->
+        <section id="dpe" class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <i data-lucide="zap" class="w-6 h-6 mr-2 text-blue-600"></i>
+                7. DPE et GES
+            </h2>
+            
+            <div class="prose prose-sm max-w-none text-gray-600">
+                <h3 class="text-lg font-semibold text-gray-900">DPE (Diagnostic de Performance Énergétique)</h3>
+                <p>Mesure la consommation d'énergie primaire en kWh/m²/an :</p>
+                
+                <div class="flex flex-wrap gap-1 my-4">
+                    <span class="px-3 py-1 bg-green-500 text-white text-sm font-medium rounded">A ≤ 50</span>
+                    <span class="px-3 py-1 bg-lime-400 text-gray-900 text-sm font-medium rounded">B 51-90</span>
+                    <span class="px-3 py-1 bg-yellow-400 text-gray-900 text-sm font-medium rounded">C 91-150</span>
+                    <span class="px-3 py-1 bg-amber-400 text-gray-900 text-sm font-medium rounded">D 151-230</span>
+                    <span class="px-3 py-1 bg-orange-500 text-white text-sm font-medium rounded">E 231-330</span>
+                    <span class="px-3 py-1 bg-red-500 text-white text-sm font-medium rounded">F 331-450</span>
+                    <span class="px-3 py-1 bg-red-700 text-white text-sm font-medium rounded">G > 450</span>
+                </div>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">GES (Gaz à Effet de Serre)</h3>
+                <p>Mesure les émissions de CO₂ en kg/m²/an :</p>
+                
+                <div class="flex flex-wrap gap-1 my-4">
+                    <span class="px-3 py-1 bg-purple-200 text-purple-900 text-sm font-medium rounded">A ≤ 5</span>
+                    <span class="px-3 py-1 bg-purple-300 text-purple-900 text-sm font-medium rounded">B 6-10</span>
+                    <span class="px-3 py-1 bg-purple-400 text-white text-sm font-medium rounded">C 11-20</span>
+                    <span class="px-3 py-1 bg-purple-500 text-white text-sm font-medium rounded">D 21-35</span>
+                    <span class="px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded">E 36-55</span>
+                    <span class="px-3 py-1 bg-purple-700 text-white text-sm font-medium rounded">F 56-80</span>
+                    <span class="px-3 py-1 bg-purple-900 text-white text-sm font-medium rounded">G > 80</span>
+                </div>
+                
+                <h3 class="text-lg font-semibold text-gray-900 mt-4">Impact sur la location</h3>
+                <p class="text-sm">
+                    Depuis 2023, les logements classés G+ (>450 kWh/m²/an) sont interdits à la location.
+                    Les logements G seront interdits en 2025, F en 2028, et E en 2034.
+                </p>
+            </div>
+        </section>
+        
+        <!-- Footer -->
+        <div class="border-t pt-6 mt-8 text-center text-sm text-gray-500">
+            <p>Maisongle - Application de recherche immobilière</p>
+            <p class="mt-1">Données mises à jour régulièrement. Dernière mise à jour : Décembre 2024</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

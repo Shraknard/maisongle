@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Maisongle{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <style>
+        .property-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .favorite-btn.active svg {
+            fill: #ef4444;
+        }
+        #map {
+            height: 400px;
+            border-radius: 0.5rem;
+        }
+        .leaflet-popup-content {
+            margin: 8px 12px;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center space-x-2">
+                        <i data-lucide="home" class="w-8 h-8 text-blue-600"></i>
+                        <span class="text-xl font-bold text-gray-900">Maisongle</span>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition">
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                        <span>Recherche</span>
+                    </a>
+                    <a href="/favorites" class="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition">
+                        <i data-lucide="heart" class="w-5 h-5"></i>
+                        <span>Favoris</span>
+                    </a>
+                    <a href="/calculator" class="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition">
+                        <i data-lucide="calculator" class="w-5 h-5"></i>
+                        <span>Simulateur</span>
+                    </a>
+                    <a href="/documentation" class="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition">
+                        <i data-lucide="book-open" class="w-5 h-5"></i>
+                        <span>Doc</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Property type labels
+        const PROPERTY_TYPES = {
+            0: 'Appartement',
+            1: 'Maison',
+            2: 'Parking',
+            3: 'Terrain',
+            4: 'Local commercial',
+            5: 'Immeuble',
+            6: 'Loft'
+        };
+        
+        const TRANSACTION_TYPES = {
+            0: 'Vente',
+            1: 'Location'
+        };
+        
+        // Format price
+        function formatPrice(price, transactionType) {
+            if (!price) return 'Prix non communiqué';
+            const formatted = new Intl.NumberFormat('fr-FR').format(price);
+            return transactionType === 1 ? `${formatted} €/mois` : `${formatted} €`;
+        }
+        
+        // Format surface
+        function formatSurface(surface) {
+            if (!surface) return '';
+            return `${surface} m²`;
+        }
+        
+        // Toggle favorite
+        async function toggleFavorite(propertyUuid, button) {
+            const isActive = button.classList.contains('active');
+            
+            if (isActive) {
+                // Remove from favorites
+                const response = await fetch(`/api/favorites/${propertyUuid}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    button.classList.remove('active');
+                    showToast('Retiré des favoris');
+                }
+            } else {
+                // Add to favorites
+                const response = await fetch('/api/favorites/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({property_uuid: propertyUuid})
+                });
+                if (response.ok) {
+                    button.classList.add('active');
+                    showToast('Ajouté aux favoris');
+                } else {
+                    const data = await response.json();
+                    showToast(data.detail || 'Erreur', 'error');
+                }
+            }
+        }
+        
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${type === 'error' ? 'bg-red-500' : 'bg-green-500'} transition-opacity duration-300`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

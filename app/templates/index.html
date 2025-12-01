@@ -1,0 +1,1253 @@
+{% extends "base.html" %}
+
+{% block title %}Recherche - Maisongle{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Search Form -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Rechercher un bien immobilier</h1>
+        
+        <form id="searchForm" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- City autocomplete (multi-select) -->
+                <div class="relative lg:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Villes ou codes postaux</label>
+                    <input type="text" id="citySearch" placeholder="Tapez une ville et cliquez pour l'ajouter..." 
+                           autocomplete="off"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <div id="cityDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                    </div>
+                    <!-- Selected cities tags -->
+                    <div id="selectedCities" class="flex flex-wrap gap-2 mt-2">
+                    </div>
+                </div>
+                
+                <!-- Radius -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Rayon de recherche</label>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="radiusEnabled" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <input type="range" id="radiusSlider" name="radius" min="1" max="100" value="5" disabled
+                               class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50">
+                        <span id="radiusValue" class="text-sm text-gray-600 w-12">5 km</span>
+                    </div>
+                </div>
+                
+                <!-- Department -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Département</label>
+                    <input type="text" name="department" placeholder="Ex: 75, 77..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <!-- Property Type (multi-select dropdown) -->
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Type de bien</label>
+                    <button type="button" id="propertyTypeBtn" onclick="togglePropertyTypeDropdown()" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-left bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent flex justify-between items-center">
+                        <span id="propertyTypeLabel">Tous les types</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
+                    </button>
+                    <div id="propertyTypeDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden">
+                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b">
+                            <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="0" checked>
+                            <span class="ml-2 text-sm">Appartement</span>
+                        </label>
+                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b">
+                            <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="1" checked>
+                            <span class="ml-2 text-sm">Maison</span>
+                        </label>
+                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b">
+                            <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="3">
+                            <span class="ml-2 text-sm">Terrain</span>
+                        </label>
+                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b">
+                            <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="4">
+                            <span class="ml-2 text-sm">Local commercial</span>
+                        </label>
+                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="5">
+                            <span class="ml-2 text-sm">Immeuble</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Transaction Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Transaction</label>
+                    <select name="transaction_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="0">Vente</option>
+                        <option value="1">Location</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Price -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Prix min (€)</label>
+                    <input type="number" name="budget_min" placeholder="0" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Prix max (€)</label>
+                    <input type="number" name="budget_max" placeholder="1000000" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <!-- Surface -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Surface min (m²)</label>
+                    <input type="number" name="surface_min" placeholder="0" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Surface max (m²)</label>
+                    <input type="number" name="surface_max" placeholder="500" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Rooms -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Pièces min</label>
+                    <input type="number" name="room_min" placeholder="1" min="1" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Pièces max</label>
+                    <input type="number" name="room_max" placeholder="10" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <!-- Bedrooms -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Chambres min</label>
+                    <input type="number" name="bedroom_min" placeholder="1" min="0" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Chambres max</label>
+                    <input type="number" name="bedroom_max" placeholder="6" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="saveSearch()" class="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition flex items-center space-x-2">
+                    <i data-lucide="bookmark" class="w-5 h-5"></i>
+                    <span>Sauvegarder</span>
+                </button>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition flex items-center space-x-2">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                    <span>Rechercher</span>
+                </button>
+            </div>
+        </form>
+        
+        <!-- Saved searches -->
+        <div id="savedSearchesSection" class="mt-4 pt-4 border-t hidden">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Recherches sauvegardées</h3>
+            <div id="savedSearchesList" class="flex flex-wrap gap-2">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Map -->
+    <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-semibold text-gray-900">Carte des annonces</h2>
+            <button onclick="openMapFullscreen()" class="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition">
+                <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                <span>Agrandir</span>
+            </button>
+        </div>
+        <div id="map"></div>
+    </div>
+    
+    <!-- Fullscreen map modal -->
+    <div id="mapFullscreenModal" class="fixed inset-0 bg-white z-[9999] hidden">
+        <div class="absolute top-4 right-4 z-[1000] flex gap-2">
+            <button onclick="closeMapFullscreen()" class="p-2 bg-white shadow-lg rounded-full hover:bg-gray-100 transition">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        <div id="fullscreenMap" class="w-full h-full"></div>
+        <!-- Fullscreen POI Legend -->
+        <div class="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-3">
+            <p class="text-xs text-gray-500 mb-2 font-medium">Commodités :</p>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Transport</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Écoles</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> Commerces</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500"></span> Santé</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-500"></span> Loisirs</span>
+            </div>
+        </div>
+        <div id="poiLoading" class="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg px-3 py-2 text-xs text-gray-500 hidden">
+            <span class="animate-pulse">Chargement des commodités...</span>
+        </div>
+    </div>
+    
+    <!-- Results -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-4">
+                <h2 class="text-lg font-semibold text-gray-900">Résultats</h2>
+                <span id="resultCount" class="text-sm text-gray-500"></span>
+            </div>
+            <!-- Price level filter -->
+            <div class="flex items-center gap-3 border-r pr-4">
+                <span class="text-sm text-gray-500">Prix/m² :</span>
+                <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" id="filterCheap" checked class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
+                    <span class="flex items-center gap-1 text-xs text-green-600"><i data-lucide="trending-down" class="w-3 h-3"></i>Moins cher</span>
+                </label>
+                <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" id="filterAverage" checked class="w-4 h-4 text-gray-600 rounded focus:ring-gray-500">
+                    <span class="flex items-center gap-1 text-xs text-gray-600"><i data-lucide="minus" class="w-3 h-3"></i>Moyen</span>
+                </label>
+                <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" id="filterExpensive" checked class="w-4 h-4 text-red-600 rounded focus:ring-red-500">
+                    <span class="flex items-center gap-1 text-xs text-red-600"><i data-lucide="trending-up" class="w-3 h-3"></i>Plus cher</span>
+                </label>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <label class="text-sm text-gray-500">Trier par :</label>
+                <select id="sortSelect" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">Pertinence</option>
+                    <option value="price_asc">Prix croissant</option>
+                    <option value="price_desc">Prix décroissant</option>
+                    <option value="surface_asc">Surface croissante</option>
+                    <option value="surface_desc">Surface décroissante</option>
+                    <option value="date_desc">Plus récentes (publication)</option>
+                    <option value="date_asc">Plus anciennes (publication)</option>
+                    <option value="updated_desc">Mises à jour récentes</option>
+                    <option value="updated_asc">Mises à jour anciennes</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="loading" class="hidden text-center py-8">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p class="mt-4 text-gray-500">Recherche en cours...</p>
+        </div>
+        
+        <div id="results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p class="text-gray-500 col-span-full text-center py-8">Lancez une recherche pour voir les résultats</p>
+        </div>
+        
+        <!-- Pagination -->
+        <div id="pagination" class="hidden flex justify-center items-center space-x-4 mt-6">
+            <button id="prevPage" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                Précédent
+            </button>
+            <span id="pageInfo" class="text-sm text-gray-600"></span>
+            <button id="nextPage" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                Suivant
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let map;
+    let markers = [];
+    let currentPage = 1;
+    let totalResults = 0;
+    let favoriteUuids = new Set();
+    
+    // Extract site name from URL
+    function getSiteName(url) {
+        if (!url) return null;
+        try {
+            const hostname = new URL(url).hostname.replace('www.', '');
+            const siteNames = {
+                'leboncoin.fr': 'Leboncoin',
+                'seloger.com': 'SeLoger',
+                'pap.fr': 'PAP',
+                'logic-immo.com': 'Logic-Immo',
+                'bien-ici.fr': 'Bien\'ici',
+                'orpi.com': 'Orpi',
+                'century21.fr': 'Century 21',
+                'laforet.com': 'Laforêt',
+                'fnaim.fr': 'FNAIM',
+                'immobilier.lefigaro.fr': 'Figaro Immo',
+                'ouestfrance-immo.com': 'Ouest-France Immo',
+                'avendrealouer.fr': 'AVendreALouer',
+                'explorimmo.com': 'Explorimmo',
+                'meilleursagents.com': 'MeilleursAgents',
+                'superimmo.com': 'Superimmo',
+                'paruvendu.fr': 'ParuVendu',
+            };
+            return siteNames[hostname] || hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
+        } catch (e) {
+            return null;
+        }
+    }
+    
+    // Initialize map
+    document.addEventListener('DOMContentLoaded', async function() {
+        map = L.map('map').setView([46.603354, 1.888334], 6); // France center
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Load favorites to know which ones are already saved
+        await loadFavorites();
+        
+        // Load saved searches
+        loadSavedSearches();
+        
+        // Restore form state from sessionStorage
+        restoreFormState();
+        
+        lucide.createIcons();
+    });
+    
+    // Save form state to sessionStorage
+    function saveFormState() {
+        const formData = {
+            selectedCities: selectedCities,
+            department: document.querySelector('[name="department"]').value,
+            transaction_type: document.querySelector('[name="transaction_type"]').value,
+            budget_min: document.querySelector('[name="budget_min"]').value,
+            budget_max: document.querySelector('[name="budget_max"]').value,
+            surface_min: document.querySelector('[name="surface_min"]').value,
+            surface_max: document.querySelector('[name="surface_max"]').value,
+            room_min: document.querySelector('[name="room_min"]').value,
+            bedroom_min: document.querySelector('[name="bedroom_min"]').value,
+            radiusEnabled: document.getElementById('radiusEnabled').checked,
+            radius: document.getElementById('radiusSlider').value,
+            propertyTypes: Array.from(document.querySelectorAll('.property-type-cb:checked')).map(cb => cb.value),
+            sortSelect: document.getElementById('sortSelect').value,
+            hasResults: currentProperties.length > 0
+        };
+        sessionStorage.setItem('maisongle_search', JSON.stringify(formData));
+    }
+    
+    // Restore form state from sessionStorage
+    function restoreFormState() {
+        const saved = sessionStorage.getItem('maisongle_search');
+        if (!saved) return;
+        
+        try {
+            const formData = JSON.parse(saved);
+            
+            // Restore selected cities
+            if (formData.selectedCities && formData.selectedCities.length > 0) {
+                selectedCities = formData.selectedCities;
+                renderSelectedCities();
+            }
+            
+            // Restore form fields
+            if (formData.department) document.querySelector('[name="department"]').value = formData.department;
+            if (formData.transaction_type) document.querySelector('[name="transaction_type"]').value = formData.transaction_type;
+            if (formData.budget_min) document.querySelector('[name="budget_min"]').value = formData.budget_min;
+            if (formData.budget_max) document.querySelector('[name="budget_max"]').value = formData.budget_max;
+            if (formData.surface_min) document.querySelector('[name="surface_min"]').value = formData.surface_min;
+            if (formData.surface_max) document.querySelector('[name="surface_max"]').value = formData.surface_max;
+            if (formData.room_min) document.querySelector('[name="room_min"]').value = formData.room_min;
+            if (formData.bedroom_min) document.querySelector('[name="bedroom_min"]').value = formData.bedroom_min;
+            
+            // Restore radius
+            if (formData.radiusEnabled) {
+                document.getElementById('radiusEnabled').checked = true;
+                document.getElementById('radiusSlider').disabled = false;
+                document.getElementById('radiusSlider').classList.remove('opacity-50');
+            }
+            if (formData.radius) {
+                document.getElementById('radiusSlider').value = formData.radius;
+                document.getElementById('radiusValue').textContent = formData.radius + ' km';
+            }
+            
+            // Restore property types
+            if (formData.propertyTypes) {
+                document.querySelectorAll('.property-type-cb').forEach(cb => {
+                    cb.checked = formData.propertyTypes.includes(cb.value);
+                });
+                updatePropertyTypeLabel();
+            }
+            
+            // Restore sort
+            if (formData.sortSelect) document.getElementById('sortSelect').value = formData.sortSelect;
+            
+            // Auto-search if there were results before
+            if (formData.hasResults && selectedCities.length > 0) {
+                performSearch();
+            }
+        } catch (e) {
+            console.error('Error restoring form state:', e);
+        }
+    }
+    
+    // Load favorites UUIDs
+    async function loadFavorites() {
+        try {
+            const response = await fetch('/api/favorites/');
+            if (response.ok) {
+                const favorites = await response.json();
+                favoriteUuids = new Set(favorites.map(f => f.property_uuid));
+            }
+        } catch (e) {
+            console.error('Error loading favorites:', e);
+        }
+    }
+    
+    // City autocomplete (multi-select)
+    let searchTimeout = null;
+    const citySearch = document.getElementById('citySearch');
+    const cityDropdown = document.getElementById('cityDropdown');
+    const selectedCitiesContainer = document.getElementById('selectedCities');
+    let selectedCities = []; // Array of {id, name, lat, lon, insee}
+    
+    citySearch.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        // Clear previous timeout
+        if (searchTimeout) clearTimeout(searchTimeout);
+        
+        // Hide dropdown if query too short
+        if (query.length < 2) {
+            cityDropdown.classList.add('hidden');
+            return;
+        }
+        
+        // Debounce search
+        searchTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/search/locations?q=${encodeURIComponent(query)}`);
+                if (response.ok) {
+                    const locations = await response.json();
+                    displayCityDropdown(locations);
+                }
+            } catch (e) {
+                console.error('Error searching locations:', e);
+            }
+        }, 300);
+    });
+    
+    function displayCityDropdown(locations) {
+        if (!locations || locations.length === 0) {
+            cityDropdown.classList.add('hidden');
+            return;
+        }
+        
+        // Filter out already selected cities
+        const selectedIds = selectedCities.map(c => c.id);
+        const filteredLocations = locations.filter(loc => !selectedIds.includes(loc['@id']));
+        
+        if (filteredLocations.length === 0) {
+            cityDropdown.classList.add('hidden');
+            return;
+        }
+        
+        cityDropdown.innerHTML = filteredLocations.map(loc => `
+            <div class="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0" 
+                 data-id="${loc['@id']}" 
+                 data-name="${loc.displayName || loc.name}"
+                 data-lat="${loc.latitude || ''}"
+                 data-lon="${loc.longitude || ''}"
+                 data-insee="${loc.insee || ''}"
+                 onclick="addCity(this)">
+                <div class="font-medium">${loc.displayName || loc.name}</div>
+                <div class="text-sm text-gray-500">${loc.zipcode || ''}</div>
+            </div>
+        `).join('');
+        
+        cityDropdown.classList.remove('hidden');
+    }
+    
+    function addCity(element) {
+        const city = {
+            id: element.dataset.id,
+            name: element.dataset.name,
+            lat: element.dataset.lat,
+            lon: element.dataset.lon,
+            insee: element.dataset.insee
+        };
+        
+        // Check if already selected
+        if (selectedCities.some(c => c.id === city.id)) {
+            cityDropdown.classList.add('hidden');
+            citySearch.value = '';
+            return;
+        }
+        
+        selectedCities.push(city);
+        renderSelectedCities();
+        citySearch.value = '';
+        cityDropdown.classList.add('hidden');
+    }
+    
+    function removeCity(id) {
+        selectedCities = selectedCities.filter(c => c.id !== id);
+        renderSelectedCities();
+    }
+    
+    function renderSelectedCities() {
+        selectedCitiesContainer.innerHTML = selectedCities.map(city => `
+            <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                <i data-lucide="map-pin" class="w-3 h-3"></i>
+                ${city.name}
+                <button type="button" onclick="removeCity('${city.id}')" class="ml-1 hover:text-blue-600">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                </button>
+            </span>
+        `).join('');
+        lucide.createIcons();
+    }
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!citySearch.contains(e.target) && !cityDropdown.contains(e.target)) {
+            cityDropdown.classList.add('hidden');
+        }
+        // Also hide property type dropdown
+        const ptDropdown = document.getElementById('propertyTypeDropdown');
+        const ptBtn = document.getElementById('propertyTypeBtn');
+        if (!ptDropdown.contains(e.target) && !ptBtn.contains(e.target)) {
+            ptDropdown.classList.add('hidden');
+        }
+    });
+    
+    // Property type multi-select
+    function togglePropertyTypeDropdown() {
+        document.getElementById('propertyTypeDropdown').classList.toggle('hidden');
+    }
+    
+    function updatePropertyTypeLabel() {
+        const checkboxes = document.querySelectorAll('.property-type-cb:checked');
+        const label = document.getElementById('propertyTypeLabel');
+        
+        if (checkboxes.length === 0) {
+            label.textContent = 'Aucun type';
+        } else if (checkboxes.length === 5) {
+            label.textContent = 'Tous les types';
+        } else {
+            const names = {
+                '0': 'Appart.',
+                '1': 'Maison',
+                '3': 'Terrain',
+                '4': 'Local',
+                '5': 'Immeuble'
+            };
+            const selected = Array.from(checkboxes).map(cb => names[cb.value]);
+            label.textContent = selected.join(', ');
+        }
+    }
+    
+    // Update label when checkboxes change
+    document.querySelectorAll('.property-type-cb').forEach(cb => {
+        cb.addEventListener('change', updatePropertyTypeLabel);
+    });
+    
+    // Initialize label
+    updatePropertyTypeLabel();
+    
+    // Show dropdown again when focusing on city search
+    citySearch.addEventListener('focus', function() {
+        if (this.value.length >= 2) {
+            this.dispatchEvent(new Event('input'));
+        }
+    });
+    
+    // Radius slider
+    const radiusEnabled = document.getElementById('radiusEnabled');
+    const radiusSlider = document.getElementById('radiusSlider');
+    const radiusValue = document.getElementById('radiusValue');
+    
+    radiusEnabled.addEventListener('change', function() {
+        radiusSlider.disabled = !this.checked;
+        if (!this.checked) {
+            radiusSlider.value = 5;
+            radiusValue.textContent = '5 km';
+        }
+    });
+    
+    radiusSlider.addEventListener('input', function() {
+        radiusValue.textContent = this.value + ' km';
+    });
+    
+    // Search form submission
+    document.getElementById('searchForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // If user typed a city but didn't select from dropdown, auto-add first result
+        const citySearchValue = citySearch.value.trim();
+        if (citySearchValue.length >= 2) {
+            try {
+                const response = await fetch(`/api/search/locations?q=${encodeURIComponent(citySearchValue)}`);
+                if (response.ok) {
+                    const locations = await response.json();
+                    if (locations.length > 0) {
+                        const loc = locations[0];
+                        const city = {
+                            id: loc['@id'],
+                            name: loc.displayName || loc.name,
+                            lat: loc.latitude || '',
+                            lon: loc.longitude || '',
+                            insee: loc.insee || ''
+                        };
+                        if (!selectedCities.some(c => c.id === city.id)) {
+                            selectedCities.push(city);
+                            renderSelectedCities();
+                        }
+                        citySearch.value = '';
+                    }
+                }
+            } catch (e) {
+                console.error('Error auto-selecting city:', e);
+            }
+        }
+        
+        currentPage = 1;
+        await performSearch();
+    });
+    
+    // Sort change
+    document.getElementById('sortSelect').addEventListener('change', async function() {
+        currentPage = 1;
+        await performSearch();
+    });
+    
+    // Price level filter change (re-filter without new API call)
+    ['filterCheap', 'filterAverage', 'filterExpensive'].forEach(id => {
+        document.getElementById(id).addEventListener('change', function() {
+            if (currentProperties.length > 0) {
+                displayResults(currentProperties, currentDvfData);
+            }
+        });
+    });
+    
+    // Pagination
+    document.getElementById('prevPage').addEventListener('click', async function() {
+        if (currentPage > 1) {
+            currentPage--;
+            await performSearch();
+        }
+    });
+    
+    document.getElementById('nextPage').addEventListener('click', async function() {
+        currentPage++;
+        await performSearch();
+    });
+    
+    async function performSearch() {
+        const form = document.getElementById('searchForm');
+        const formData = new FormData(form);
+        
+        // Build query params
+        const params = new URLSearchParams();
+        const isRadiusEnabled = radiusEnabled.checked;
+        
+        for (const [key, value] of formData.entries()) {
+            if (!value) continue;
+            
+            // Skip city-related fields, we handle them separately
+            if (key === 'city_id' || key === 'lat' || key === 'lon') continue;
+            
+            // Handle radius
+            if (key === 'radius') {
+                if (isRadiusEnabled && selectedCities.length === 1) {
+                    params.append(key, value);
+                }
+                continue;
+            }
+            
+            params.append(key, value);
+        }
+        
+        // Add selected cities
+        if (selectedCities.length > 0) {
+            if (isRadiusEnabled && selectedCities.length === 1) {
+                // Radius search with single city - use lat/lon
+                const city = selectedCities[0];
+                if (city.lat) params.append('lat', city.lat);
+                if (city.lon) params.append('lon', city.lon);
+            } else {
+                // Multiple cities or no radius - use city IDs
+                selectedCities.forEach(city => {
+                    params.append('city_id', city.id);
+                });
+            }
+        }
+        
+        params.append('page', currentPage);
+        
+        // Add sorting
+        const sortValue = document.getElementById('sortSelect').value;
+        if (sortValue) {
+            const [sortBy, sortOrder] = sortValue.split('_');
+            params.append('sort_by', sortBy);
+            params.append('sort_order', sortOrder);
+        }
+        
+        // Add property types
+        const selectedTypes = document.querySelectorAll('.property-type-cb:checked');
+        selectedTypes.forEach(cb => {
+            params.append('property_types', cb.value);
+        });
+        
+        // Show loading
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('results').innerHTML = '';
+        
+        try {
+            console.log('Fetching:', `/api/search/?${params}`);
+            const response = await fetch(`/api/search/?${params}`);
+            const data = await response.json();
+            console.log('API response:', data.total, 'total,', data.properties?.length, 'properties');
+            
+            totalResults = data.total;
+            
+            // Fetch price data (DVF for sales, Loyers for rentals)
+            const inseeCodes = [...new Set(data.properties.map(p => p.city?.insee).filter(Boolean))];
+            const isRental = document.querySelector('[name="transaction_type"]').value === '1';
+            let priceData = {};
+            
+            if (inseeCodes.length > 0) {
+                try {
+                    if (isRental) {
+                        // Fetch rental price data
+                        const loyerResponse = await fetch('/api/search/loyers/batch?type_bien=appartement', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(inseeCodes)
+                        });
+                        const loyerData = await loyerResponse.json();
+                        // Convert to same format as DVF
+                        for (const [code, data] of Object.entries(loyerData)) {
+                            priceData[code] = { prix_m2_moyen: data.loyer_m2 };
+                        }
+                    } else {
+                        // Fetch sale price data (DVF)
+                        const dvfResponse = await fetch('/api/search/dvf/batch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(inseeCodes)
+                        });
+                        priceData = await dvfResponse.json();
+                    }
+                } catch (e) {
+                    console.error('Error fetching price data:', e);
+                }
+            }
+            
+            displayResults(data.properties, priceData);
+            updatePagination();
+            updateMap(data.properties);
+            
+            // Save form state after successful search
+            saveFormState();
+            
+        } catch (error) {
+            console.error('Search error:', error);
+            document.getElementById('results').innerHTML = '<p class="text-red-500 col-span-full text-center py-8">Erreur lors de la recherche</p>';
+        } finally {
+            document.getElementById('loading').classList.add('hidden');
+        }
+    }
+    
+    // Get price indicator (cheap/average/expensive)
+    function getPriceIndicator(price, surface, insee, dvfData) {
+        if (!price || !surface || !insee || !dvfData[insee.padStart(5, '0')]) return null;
+        
+        const dvf = dvfData[insee.padStart(5, '0')];
+        if (!dvf.prix_m2_moyen) return null;
+        
+        const prixM2 = price / surface;
+        const ratio = prixM2 / dvf.prix_m2_moyen;
+        
+        // < 0.85 = cheap (green), 0.85-1.15 = average (gray), > 1.15 = expensive (red)
+        if (ratio < 0.85) {
+            return { color: 'text-green-500', bg: 'bg-green-100', label: '-' + Math.round((1 - ratio) * 100) + '%', icon: 'trending-down', level: 'cheap' };
+        } else if (ratio > 1.15) {
+            return { color: 'text-red-500', bg: 'bg-red-100', label: '+' + Math.round((ratio - 1) * 100) + '%', icon: 'trending-up', level: 'expensive' };
+        } else {
+            return { color: 'text-gray-500', bg: 'bg-gray-100', label: '≈', icon: 'minus', level: 'average' };
+        }
+    }
+    
+    // Store DVF data globally for filtering
+    let currentDvfData = {};
+    
+    function displayResults(properties, dvfData = {}) {
+        const container = document.getElementById('results');
+        currentDvfData = dvfData;
+        
+        console.log('displayResults called with', properties?.length, 'properties');
+        
+        // Filter out properties without URL
+        const propertiesWithUrl = (properties || []).filter(prop => {
+            return prop.adverts?.some(a => a.url);
+        });
+        
+        console.log('After URL filter:', propertiesWithUrl.length);
+        
+        // Store for fullscreen map
+        currentProperties = propertiesWithUrl;
+        
+        // Apply price level filter
+        const showCheap = document.getElementById('filterCheap').checked;
+        const showAverage = document.getElementById('filterAverage').checked;
+        const showExpensive = document.getElementById('filterExpensive').checked;
+        
+        const filteredProperties = propertiesWithUrl.filter(prop => {
+            const indicator = getPriceIndicator(prop.price, prop.surface, prop.city?.insee, dvfData);
+            if (!indicator) return true; // Show if no DVF data available
+            
+            if (indicator.level === 'cheap' && !showCheap) return false;
+            if (indicator.level === 'average' && !showAverage) return false;
+            if (indicator.level === 'expensive' && !showExpensive) return false;
+            return true;
+        });
+        
+        console.log('After price filter:', filteredProperties.length);
+        
+        document.getElementById('resultCount').textContent = `${filteredProperties.length} / ${totalResults} résultat(s)`;
+        
+        if (!filteredProperties || filteredProperties.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">Aucun résultat trouvé avec ces filtres</p>';
+            return;
+        }
+        
+        container.innerHTML = filteredProperties.map(prop => {
+            const uuid = prop.uuid || prop.property?.split('/').pop();
+            const isFavorite = favoriteUuids.has(uuid);
+            const picture = prop.pictures?.[0] || 'https://via.placeholder.com/400x300?text=Pas+de+photo';
+            const city = prop.city?.name || 'Ville inconnue';
+            const zipcode = prop.city?.zipcode || '';
+            const advertUrl = prop.adverts?.[0]?.url || '';
+            const siteName = getSiteName(advertUrl);
+            const priceIndicator = getPriceIndicator(prop.price, prop.surface, prop.city?.insee, dvfData);
+            
+            return `
+                <div class="property-card bg-white border rounded-xl overflow-hidden transition-all duration-200">
+                <a href="/property/${uuid}" class="block">
+                    <div class="relative">
+                        <img src="${picture}" alt="${prop.title || 'Bien immobilier'}" 
+                             class="w-full h-48 object-cover" 
+                             onerror="this.src='https://via.placeholder.com/400x300?text=Pas+de+photo'">
+                        <button onclick="event.preventDefault(); event.stopPropagation(); toggleFavorite('${uuid}', this)" 
+                                class="favorite-btn absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:scale-110 transition ${isFavorite ? 'active' : ''}">
+                            <i data-lucide="heart" class="w-5 h-5 ${isFavorite ? 'text-red-500' : 'text-gray-400'}"></i>
+                        </button>
+                        <span class="absolute bottom-3 left-3 px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded">
+                            ${PROPERTY_TYPES[prop.propertyType] || 'Bien'}
+                        </span>
+                        ${siteName ? `<span class="absolute top-3 left-3 px-2 py-1 bg-gray-800/80 text-white text-xs font-medium rounded">${siteName}</span>` : ''}
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-gray-900 line-clamp-1 mb-2">${prop.title || 'Sans titre'}</h3>
+                        <div class="flex items-center gap-2 mb-2">
+                            <p class="text-blue-600 font-bold text-lg">${formatPrice(prop.price, prop.transactionType)}</p>
+                            ${priceIndicator ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded ${priceIndicator.bg} ${priceIndicator.color} text-xs font-medium" title="vs moyenne commune"><i data-lucide="${priceIndicator.icon}" class="w-3 h-3"></i>${priceIndicator.label}</span>` : ''}
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500 mb-3">
+                            <i data-lucide="map-pin" class="w-4 h-4 mr-1"></i>
+                            <span>${city} ${zipcode}</span>
+                        </div>
+                        <div class="flex items-center space-x-4 text-sm text-gray-600">
+                            ${prop.surface ? `<span class="flex items-center"><i data-lucide="square" class="w-4 h-4 mr-1"></i>${prop.surface} m²</span>` : ''}
+                            ${prop.room ? `<span class="flex items-center"><i data-lucide="door-open" class="w-4 h-4 mr-1"></i>${prop.room} p.</span>` : ''}
+                            ${prop.bedroom ? `<span class="flex items-center"><i data-lucide="bed" class="w-4 h-4 mr-1"></i>${prop.bedroom} ch.</span>` : ''}
+                        </div>
+                    </div>
+                </a>
+                </div>
+            `;
+        }).join('');
+        
+        lucide.createIcons();
+    }
+    
+    function updatePagination() {
+        const pagination = document.getElementById('pagination');
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        
+        if (totalResults > 0) {
+            pagination.classList.remove('hidden');
+            pagination.classList.add('flex');
+            
+            const totalPages = Math.ceil(totalResults / 50); // 50 per page
+            pageInfo.textContent = `Page ${currentPage} / ${totalPages}`;
+            
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+        } else {
+            pagination.classList.add('hidden');
+        }
+    }
+    
+    function updateMap(properties) {
+        // Clear existing markers
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        
+        if (!properties || properties.length === 0) return;
+        
+        const bounds = [];
+        
+        properties.forEach(prop => {
+            // Try property location first (precise), then fall back to city.location
+            const lat = prop.location?.lat || prop.city?.location?.lat;
+            const lon = prop.location?.lon || prop.city?.location?.lon;
+            
+            if (lat && lon) {
+                const uuid = prop.uuid || prop.property?.split('/').pop();
+                const picture = prop.pictures?.[0] || '';
+                const marker = L.marker([lat, lon]).addTo(map);
+                
+                const popupContent = `
+                    <div class="min-w-[220px]">
+                        ${picture ? `<img src="${picture}" alt="" class="w-full h-24 object-cover rounded mb-2" onerror="this.style.display='none'">` : ''}
+                        <strong class="line-clamp-1">${prop.title || 'Sans titre'}</strong>
+                        <div class="text-blue-600 font-bold">${formatPrice(prop.price, prop.transactionType)}</div>
+                        <div class="text-gray-500 text-sm">${prop.city?.name || ''}</div>
+                        <a href="/property/${uuid}" class="text-blue-500 hover:underline text-sm">Voir le détail →</a>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                marker.on('mouseover', function() { this.openPopup(); });
+                marker.on('mouseout', function() { this.closePopup(); });
+                marker.on('click', function() { window.location.href = '/property/' + uuid; });
+                
+                markers.push(marker);
+                bounds.push([lat, lon]);
+            }
+        });
+        
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [20, 20] });
+        }
+    }
+    
+    // Saved searches functions
+    async function loadSavedSearches() {
+        try {
+            const response = await fetch('/api/saved-searches/');
+            if (response.ok) {
+                const searches = await response.json();
+                displaySavedSearches(searches);
+            }
+        } catch (e) {
+            console.error('Error loading saved searches:', e);
+        }
+    }
+    
+    function displaySavedSearches(searches) {
+        const section = document.getElementById('savedSearchesSection');
+        const list = document.getElementById('savedSearchesList');
+        
+        if (searches.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+        
+        section.classList.remove('hidden');
+        list.innerHTML = searches.map(s => `
+            <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2 group">
+                <button onclick="applySavedSearch(${s.id})" class="text-sm text-gray-700 hover:text-blue-600 mr-2">
+                    ${s.name}
+                </button>
+                <button onclick="deleteSavedSearch(${s.id})" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+        `).join('');
+        
+        lucide.createIcons();
+    }
+    
+    async function saveSearch() {
+        const name = prompt('Nom de la recherche :');
+        if (!name) return;
+        
+        const form = document.getElementById('searchForm');
+        const formData = new FormData(form);
+        
+        const searchData = {
+            name: name,
+            selected_cities: selectedCities.length > 0 ? selectedCities : null,
+            department: formData.get('department') || null,
+            property_type: formData.get('property_type') ? parseInt(formData.get('property_type')) : null,
+            transaction_type: formData.get('transaction_type') ? parseInt(formData.get('transaction_type')) : 0,
+            budget_min: formData.get('budget_min') ? parseInt(formData.get('budget_min')) : null,
+            budget_max: formData.get('budget_max') ? parseInt(formData.get('budget_max')) : null,
+            surface_min: formData.get('surface_min') ? parseInt(formData.get('surface_min')) : null,
+            surface_max: formData.get('surface_max') ? parseInt(formData.get('surface_max')) : null,
+            room_min: formData.get('room_min') ? parseInt(formData.get('room_min')) : null,
+            room_max: formData.get('room_max') ? parseInt(formData.get('room_max')) : null,
+            bedroom_min: formData.get('bedroom_min') ? parseInt(formData.get('bedroom_min')) : null,
+            bedroom_max: formData.get('bedroom_max') ? parseInt(formData.get('bedroom_max')) : null,
+        };
+        
+        try {
+            const response = await fetch('/api/saved-searches/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(searchData)
+            });
+            
+            if (response.ok) {
+                showToast('Recherche sauvegardée');
+                loadSavedSearches();
+            } else {
+                showToast('Erreur lors de la sauvegarde', 'error');
+            }
+        } catch (e) {
+            console.error('Error saving search:', e);
+            showToast('Erreur lors de la sauvegarde', 'error');
+        }
+    }
+    
+    async function applySavedSearch(searchId) {
+        try {
+            const response = await fetch(`/api/saved-searches/${searchId}`);
+            if (response.ok) {
+                const search = await response.json();
+                
+                // Fill form with saved values
+                const form = document.getElementById('searchForm');
+                
+                // Restore selected cities
+                if (search.selected_cities && search.selected_cities.length > 0) {
+                    selectedCities = search.selected_cities;
+                    renderSelectedCities();
+                } else if (search.city_id && search.city_name) {
+                    // Legacy: single city
+                    selectedCities = [{
+                        id: search.city_id,
+                        name: search.city_name,
+                        lat: '',
+                        lon: '',
+                        insee: ''
+                    }];
+                    renderSelectedCities();
+                } else {
+                    selectedCities = [];
+                    renderSelectedCities();
+                }
+                
+                if (search.department) form.querySelector('[name="department"]').value = search.department;
+                if (search.transaction_type !== null) form.querySelector('[name="transaction_type"]').value = search.transaction_type;
+                if (search.budget_min) form.querySelector('[name="budget_min"]').value = search.budget_min;
+                if (search.budget_max) form.querySelector('[name="budget_max"]').value = search.budget_max;
+                if (search.surface_min) form.querySelector('[name="surface_min"]').value = search.surface_min;
+                if (search.surface_max) form.querySelector('[name="surface_max"]').value = search.surface_max;
+                if (search.room_min) form.querySelector('[name="room_min"]').value = search.room_min;
+                if (search.room_max) form.querySelector('[name="room_max"]').value = search.room_max;
+                if (search.bedroom_min) form.querySelector('[name="bedroom_min"]').value = search.bedroom_min;
+                if (search.bedroom_max) form.querySelector('[name="bedroom_max"]').value = search.bedroom_max;
+                
+                // Trigger search
+                currentPage = 1;
+                await performSearch();
+            }
+        } catch (e) {
+            console.error('Error applying saved search:', e);
+        }
+    }
+    
+    async function deleteSavedSearch(searchId) {
+        if (!confirm('Supprimer cette recherche ?')) return;
+        
+        try {
+            const response = await fetch(`/api/saved-searches/${searchId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                showToast('Recherche supprimée');
+                loadSavedSearches();
+            }
+        } catch (e) {
+            console.error('Error deleting saved search:', e);
+        }
+    }
+    
+    // Fullscreen map
+    let fullscreenMap = null;
+    let currentProperties = [];
+    
+    function openMapFullscreen() {
+        const modal = document.getElementById('mapFullscreenModal');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        // Initialize fullscreen map if not already done
+        if (!fullscreenMap) {
+            fullscreenMap = L.map('fullscreenMap').setView([46.603354, 1.888334], 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(fullscreenMap);
+        }
+        
+        // Copy markers from main map
+        setTimeout(() => {
+            fullscreenMap.invalidateSize();
+            
+            // Clear existing markers
+            fullscreenMap.eachLayer(layer => {
+                if (layer instanceof L.Marker) fullscreenMap.removeLayer(layer);
+            });
+            
+            // Add property markers
+            const bounds = [];
+            currentProperties.forEach(prop => {
+                const lat = prop.location?.lat || prop.city?.location?.lat;
+                const lon = prop.location?.lon || prop.city?.location?.lon;
+                
+                if (lat && lon) {
+                    const uuid = prop.uuid || prop.property?.split('/').pop();
+                    const picture = prop.pictures?.[0] || '';
+                    
+                    const marker = L.marker([lat, lon]).addTo(fullscreenMap);
+                    const popupContent = `
+                        <div class="min-w-[220px]">
+                            ${picture ? `<img src="${picture}" alt="" class="w-full h-24 object-cover rounded mb-2" onerror="this.style.display='none'">` : ''}
+                            <strong class="line-clamp-1">${prop.title || 'Sans titre'}</strong>
+                            <div class="text-blue-600 font-bold">${formatPrice(prop.price, prop.transactionType)}</div>
+                            <div class="text-gray-500 text-sm">${prop.city?.name || ''}</div>
+                        </div>
+                    `;
+                    marker.bindPopup(popupContent);
+                    marker.on('mouseover', function() { this.openPopup(); });
+                    marker.on('mouseout', function() { this.closePopup(); });
+                    marker.on('click', function() { window.location.href = '/property/' + uuid; });
+                    
+                    bounds.push([lat, lon]);
+                }
+            });
+            
+            if (bounds.length > 0) {
+                fullscreenMap.fitBounds(bounds, { padding: [50, 50] });
+                
+                // Load POIs for the center of bounds
+                const center = fullscreenMap.getCenter();
+                loadPOIs(center.lat, center.lng);
+            }
+        }, 100);
+        
+        lucide.createIcons();
+    }
+    
+    function closeMapFullscreen() {
+        document.getElementById('mapFullscreenModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMapFullscreen();
+    });
+    
+    // POI configuration
+    const poiConfig = {
+        'station': { color: '#3b82f6', label: 'Transport' },
+        'bus_stop': { color: '#3b82f6', label: 'Arrêt bus' },
+        'subway_entrance': { color: '#3b82f6', label: 'Métro' },
+        'tram_stop': { color: '#3b82f6', label: 'Tram' },
+        'school': { color: '#eab308', label: 'École' },
+        'kindergarten': { color: '#eab308', label: 'Maternelle' },
+        'college': { color: '#eab308', label: 'Collège' },
+        'university': { color: '#eab308', label: 'Université' },
+        'supermarket': { color: '#22c55e', label: 'Supermarché' },
+        'convenience': { color: '#22c55e', label: 'Épicerie' },
+        'bakery': { color: '#22c55e', label: 'Boulangerie' },
+        'pharmacy': { color: '#ef4444', label: 'Pharmacie' },
+        'hospital': { color: '#ef4444', label: 'Hôpital' },
+        'doctors': { color: '#ef4444', label: 'Médecin' },
+        'clinic': { color: '#ef4444', label: 'Clinique' },
+        'park': { color: '#a855f7', label: 'Parc' },
+        'sports_centre': { color: '#a855f7', label: 'Sport' },
+        'cinema': { color: '#a855f7', label: 'Cinéma' },
+        'restaurant': { color: '#a855f7', label: 'Restaurant' },
+    };
+    
+    async function loadPOIs(lat, lon) {
+        if (!fullscreenMap) return;
+        
+        document.getElementById('poiLoading').classList.remove('hidden');
+        
+        const radius = 1000; // 1km radius
+        const query = `
+            [out:json][timeout:25];
+            (
+                node["railway"="station"](around:${radius},${lat},${lon});
+                node["highway"="bus_stop"](around:${radius},${lat},${lon});
+                node["railway"="subway_entrance"](around:${radius},${lat},${lon});
+                node["railway"="tram_stop"](around:${radius},${lat},${lon});
+                node["amenity"="school"](around:${radius},${lat},${lon});
+                node["amenity"="kindergarten"](around:${radius},${lat},${lon});
+                node["amenity"="college"](around:${radius},${lat},${lon});
+                node["amenity"="university"](around:${radius},${lat},${lon});
+                node["shop"="supermarket"](around:${radius},${lat},${lon});
+                node["shop"="convenience"](around:${radius},${lat},${lon});
+                node["shop"="bakery"](around:${radius},${lat},${lon});
+                node["amenity"="pharmacy"](around:${radius},${lat},${lon});
+                node["amenity"="hospital"](around:${radius},${lat},${lon});
+                node["amenity"="doctors"](around:${radius},${lat},${lon});
+                node["amenity"="clinic"](around:${radius},${lat},${lon});
+                node["leisure"="park"](around:${radius},${lat},${lon});
+                node["leisure"="sports_centre"](around:${radius},${lat},${lon});
+                node["amenity"="cinema"](around:${radius},${lat},${lon});
+            );
+            out body;
+        `;
+        
+        try {
+            const response = await fetch('https://overpass-api.de/api/interpreter', {
+                method: 'POST',
+                body: 'data=' + encodeURIComponent(query),
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+            
+            const data = await response.json();
+            
+            if (data.elements && data.elements.length > 0) {
+                displayPOIs(data.elements, fullscreenMap);
+            }
+        } catch (e) {
+            console.error('Error loading POIs:', e);
+        } finally {
+            document.getElementById('poiLoading').classList.add('hidden');
+        }
+    }
+    
+    function displayPOIs(pois, targetMap) {
+        pois.forEach(poi => {
+            const tags = poi.tags || {};
+            let poiType = tags.railway || tags.highway || tags.amenity || tags.shop || tags.leisure;
+            const config = poiConfig[poiType];
+            
+            if (config && poi.lat && poi.lon) {
+                const name = tags.name || config.label;
+                const icon = L.divIcon({
+                    className: 'poi-marker',
+                    html: `<div style="width:12px;height:12px;background:${config.color};border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [12, 12],
+                    iconAnchor: [6, 6]
+                });
+                
+                L.marker([poi.lat, poi.lon], { icon })
+                    .addTo(targetMap)
+                    .bindPopup(`<strong>${config.label}</strong><br>${name !== config.label ? name : ''}`);
+            }
+        });
+    }
+</script>
+{% endblock %}
