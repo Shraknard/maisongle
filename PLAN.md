@@ -10,7 +10,8 @@ avec stockage local et rafraîchissement à la demande. Usage strictement person
 - **Modèle de rafraîchissement** : pas de scheduler. Le scraping se déclenche **au chargement de la page**,
   avec un **throttle de 5 min par périmètre de recherche** (signature des critères). Si scrapé il y a < 5 min → on sert le cache DB.
 - **Pilote du scraping** : les critères de recherche (et `saved_searches`) définissent le périmètre scrapé.
-- **Sources v1** : sources ouvertes d'abord (Bien'ici JSON, PAP HTML) + autocomplétion via l'API officielle `geo.api.gouv.fr`.
+- **Sources v1** : Bien'ici (JSON ouvert, `httpx`) + PAP (HTML `selectolax`) + autocomplétion via l'API officielle `geo.api.gouv.fr`.
+  PAP est désormais derrière Cloudflare → le scraper PAP utilise `curl_cffi` (usurpation d'empreinte TLS Chrome) au lieu de `httpx`.
   DataDome (Leboncoin / SeLoger) repoussé après validation de la chaîne complète.
 - **Enrichissement** (georisques + zonage ABC) : conservé, déclenché **uniquement à la mise en favori**.
 
@@ -44,16 +45,18 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
 - [x] `main.py` : enregistrement du router listings
 - [x] Frontend `index.html` : bouton « masquer », indicateur de baisse de prix
 - [x] Frontend `property.html` : détail servi depuis la DB (`/api/listings/{uuid}`)
-- [ ] Adaptation `saved_searches` (INSEE au lieu des reliquats Melo `city_id`)
+- [x] Adaptation `saved_searches` (INSEE via `selected_cities`, retrait des reliquats Melo `city_id`/`city_name`/`city_insee`/`zipcode`)
 - [x] Test d'intégration du pipeline (scrape → DB → throttle → baisse de prix → masquage) ✅
 
 ### 3. Sources supplémentaires
-- [ ] Scraper **PAP** (HTML via selectolax)
+- [x] Scraper **PAP** (HTML via selectolax + `curl_cffi` pour franchir Cloudflare) — résolution commune→geo id via `ac-geo`,
+  pagination en suivant le lien « Suivante » (stop avant `/proximite`), URL par type (vente : pluriel ; location : singulier).
+  Limites : pas de coordonnées (absent de la carte) ; INSEE = commune recherchée ; loc. limitée aux types appartement/maison/local-commercial.
 - [ ] Recherche par rayon (lat/lon/radius) pour Bien'ici
 - [ ] *Plus tard* : Leboncoin / SeLoger (DataDome via curl_cffi / Camoufox)
 
 ### 4. Finitions
 - [x] Mise à jour `requirements.txt` (selectolax)
 - [x] Mise à jour `README.md`
-- [ ] Mise à jour `CLAUDE.md` (section « À faire »)
-- [ ] Nettoyage des reliquats Melo (schémas favoris legacy, `saved_searches.city_id`)
+- [x] Mise à jour `CLAUDE.md` (section « À faire »)
+- [x] Nettoyage des reliquats Melo (`saved_searches.city_id` & co. — schémas favoris déjà normalisés ; migration `scripts/migrate_saved_searches.py`)

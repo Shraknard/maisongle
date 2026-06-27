@@ -1049,24 +1049,11 @@
                 // Fill form with saved values
                 const form = document.getElementById('searchForm');
                 
-                // Restore selected cities
-                if (search.selected_cities && search.selected_cities.length > 0) {
-                    selectedCities = search.selected_cities;
-                    renderSelectedCities();
-                } else if (search.city_id && search.city_name) {
-                    // Legacy: single city
-                    selectedCities = [{
-                        id: search.city_id,
-                        name: search.city_name,
-                        lat: '',
-                        lon: '',
-                        insee: ''
-                    }];
-                    renderSelectedCities();
-                } else {
-                    selectedCities = [];
-                    renderSelectedCities();
-                }
+                // Restore selected cities (INSEE-keyed)
+                selectedCities = (search.selected_cities && search.selected_cities.length > 0)
+                    ? search.selected_cities
+                    : [];
+                renderSelectedCities();
                 
                 if (search.department) form.querySelector('[name="department"]').value = search.department;
                 if (search.transaction_type !== null) form.querySelector('[name="transaction_type"]').value = search.transaction_type;

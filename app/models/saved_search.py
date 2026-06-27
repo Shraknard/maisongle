@@ -14,13 +14,8 @@ class SavedSearch(Base):
     
     # Location filters
     department = Column(String(10), nullable=True)
-    city_id = Column(String(255), nullable=True)  # e.g., /cities/30950 (legacy)
-    city_name = Column(String(255), nullable=True)  # Display name (legacy)
-    city_insee = Column(String(10), nullable=True)
-    zipcode = Column(String(10), nullable=True)
-    
-    # Multiple cities (new)
-    selected_cities = Column(JSON, nullable=True)  # [{id, name, lat, lon, insee}, ...]
+    # Selected communes, INSEE-keyed: [{id, name, lat, lon, insee}, ...]
+    selected_cities = Column(JSON, nullable=True)
     
     # Property filters
     property_type = Column(Integer, nullable=True)  # 0=apartment, 1=house, etc.

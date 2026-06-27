@@ -7,7 +7,8 @@ Application web de recherche immobilière en France avec scraping direct des sou
 - **Backend** : Python 3.10+ / FastAPI / uvicorn
 - **Base de données** : PostgreSQL / SQLAlchemy ORM / Alembic (migrations)
 - **Frontend** : Jinja2 templates / TailwindCSS / Leaflet (OpenStreetMap)
-- **HTTP client** : httpx (async)
+- **HTTP client** : httpx (async) ; curl_cffi pour les sources protégées par anti-bot (usurpation TLS)
+- **Scraping** : selectolax (parsing HTML)
 
 ## Structure du projet
 
@@ -16,13 +17,23 @@ app/
   main.py              # Point d'entrée FastAPI, routes pages HTML
   config.py            # Settings via pydantic-settings + .env
   database.py          # Engine SQLAlchemy + session
-  models/              # ORM models (Favorite, DVFCommune, LoyerCommune, ZonageCommune, SavedSearch)
+  models/              # ORM models (Favorite, Listing/PriceHistory/Hidden/ScrapeRun, DVFCommune, LoyerCommune, ZonageCommune, SavedSearch)
   schemas/             # Pydantic schemas (validation entrée/sortie API)
   routers/             # Endpoints API REST
-    search.py          # DVF (prix) et loyers par commune (données locales)
+    search.py          # Recherche d'annonces (DB + refresh throttlé), autocomplétion villes, DVF/loyers
+    listings.py        # Détail d'une annonce + masquage (POST /hide)
     favorites.py       # CRUD favoris + enrichissement (zonage ABC, géorisques)
     saved_searches.py  # CRUD recherches sauvegardées
+  scrapers/            # Scrapers par plateforme (interface commune BaseScraper)
+    base.py            # BaseScraper, SearchCriteria, NormalizedListing, Commune
+    bienici.py         # Bien'ici (JSON ouvert, httpx)
+    pap.py             # PAP / Particulier à Particulier (HTML selectolax, curl_cffi/Cloudflare)
+    registry.py        # Enregistrement des scrapers actifs
   services/            # Logique métier
+    scrape.py          # Refresh throttlé (5 min/périmètre), upsert + historique de prix
+    geo.py             # Autocomplétion communes + résolution INSEE via geo.api.gouv.fr
+    dedup.py           # Géohash + clé de déduplication inter-sources
+    listing_view.py    # Sérialisation Listing -> shape attendue par les templates
     enrichment.py      # Orchestration enrichissement (zonage + géorisques)
     georisques.py      # Client API Géorisques (risques naturels/technologiques)
     zonage.py          # Lookup zonage ABC Pinel en base
@@ -60,10 +71,23 @@ GEORISQUES_API_BASE_URL=https://georisques.gouv.fr/api/v1
 
 - Langue du code : anglais (noms de variables, fonctions, classes)
 - Langue des données et de l'UI : français
-- Les codes INSEE de Paris/Lyon/Marseille sont normalisés (arrondissements → ville principale) via `normalize_insee_code()` dans `routers/search.py`
+- Les codes INSEE de Paris/Lyon/Marseille sont normalisés (arrondissements → ville principale) via `normalize_insee_code()` dans `services/geo.py` — appliqué côté stockage (`scrape._apply`) et côté filtre de recherche
 - Les favoris stockent une copie complète des données du bien en base (pas de dépendance externe pour relecture)
 - L'enrichissement (zonage ABC + géorisques) est déclenché automatiquement à l'ajout en favoris
 
+## Scraping des annonces
+
+Le scraping direct remplace l'ancienne API Melo.io (supprimée). Voir `PLAN.md` pour l'architecture
+complète et l'avancement. En résumé :
+
+- Refresh **à la demande** au chargement de la recherche, **throttlé à 5 min par périmètre**
+  (signature des critères) — pas de scheduler. Cache servi en deçà du throttle.
+- Sources actives : **Bien'ici** (JSON, httpx) et **PAP** (HTML selectolax + curl_cffi pour passer
+  Cloudflare). Les annonces PAP n'ont pas de coordonnées (pas de marqueur carte).
+- Enrichissement (zonage ABC + géorisques) déclenché **uniquement à la mise en favori**.
+
 ## A faire
 
-La recherche et le scraping des annonces immobilières (Leboncoin, SeLoger, etc.) ne sont pas encore implémentés. L'ancien système utilisait l'API Melo.io (supprimée car trop cher). Les endpoints de recherche d'annonces et d'autocomplétion des villes sont à recoder avec du scraping direct.
+- Recherche par rayon (lat/lon/radius) pour Bien'ici.
+- Sources protégées par DataDome (Leboncoin, SeLoger) — repoussées (curl_cffi / Camoufox).
+  À exécuter depuis une IP résidentielle.

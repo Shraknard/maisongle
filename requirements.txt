@@ -15,6 +15,7 @@ httpx==0.25.2
 
 # Scraping
 selectolax==0.3.21  # HTML parsing (PAP)
+curl_cffi==0.15.0   # TLS-impersonating HTTP client (PAP behind Cloudflare)
 
 # Excel parsing (zonage ABC)
 openpyxl==3.1.2

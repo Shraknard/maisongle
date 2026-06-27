@@ -101,8 +101,14 @@ supprimé). Architecture :
 - **Autocomplétion des villes** : via l'API officielle [geo.api.gouv.fr](https://geo.api.gouv.fr)
   (nom, code INSEE, code postal, coordonnées).
 - **Sources** : architecture modulaire (`app/scrapers/`), une classe par plateforme avec une
-  sortie normalisée commune. Source active : **Bien'ici** (endpoints JSON ouverts). Ajouter une
-  source = déposer un module et l'enregistrer dans `app/scrapers/registry.py`.
+  sortie normalisée commune. Sources actives :
+  - **Bien'ici** (endpoints JSON ouverts, via `httpx`).
+  - **PAP** (Particulier à Particulier) — HTML parsé avec `selectolax`. Le site est protégé par
+    Cloudflare, donc le scraper utilise `curl_cffi` avec usurpation d'empreinte TLS Chrome. Les
+    annonces PAP n'ont pas de coordonnées (absentes des cartes de résultats) : elles sont rattachées
+    à l'INSEE de la commune recherchée pour le filtrage, mais n'apparaissent pas sur la carte.
+
+  Ajouter une source = déposer un module et l'enregistrer dans `app/scrapers/registry.py`.
 
 > À exécuter depuis une **IP résidentielle** : les plateformes protégées (Leboncoin, SeLoger via
 > DataDome) bannissent rapidement les IP datacenter.

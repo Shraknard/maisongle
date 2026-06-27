@@ -9,12 +9,8 @@ class SavedSearchCreate(BaseModel):
     
     # Location filters
     department: Optional[str] = None
-    city_id: Optional[str] = None
-    city_name: Optional[str] = None
-    city_insee: Optional[str] = None
-    zipcode: Optional[str] = None
     selected_cities: Optional[List[Any]] = None  # [{id, name, lat, lon, insee}, ...]
-    
+
     # Property filters
     property_type: Optional[int] = None
     transaction_type: Optional[int] = 0
@@ -41,12 +37,8 @@ class SavedSearchResponse(BaseModel):
     
     # Location filters
     department: Optional[str] = None
-    city_id: Optional[str] = None
-    city_name: Optional[str] = None
-    city_insee: Optional[str] = None
-    zipcode: Optional[str] = None
     selected_cities: Optional[List[Any]] = None  # [{id, name, lat, lon, insee}, ...]
-    
+
     # Property filters
     property_type: Optional[int] = None
     transaction_type: Optional[int] = None

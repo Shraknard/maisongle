@@ -4,10 +4,12 @@ from typing import Dict, List, Optional
 
 from app.scrapers.base import BaseScraper
 from app.scrapers.bienici import BienIciScraper
+from app.scrapers.pap import PapScraper
 
 # Adding a new source = import its scraper and add an instance here.
 _INSTANCES: List[BaseScraper] = [
     BienIciScraper(),
+    PapScraper(),
 ]
 
 SCRAPERS: Dict[str, BaseScraper] = {s.source: s for s in _INSTANCES}
