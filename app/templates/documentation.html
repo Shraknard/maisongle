@@ -30,19 +30,6 @@
             </h2>
             
             <div class="space-y-4">
-                <div class="border-l-4 border-blue-500 pl-4">
-                    <h3 class="font-semibold text-gray-900">Melo.io (Annonces immobilières)</h3>
-                    <p class="text-gray-600 text-sm mt-1">
-                        API agrégateur qui collecte les annonces de multiples sources : Leboncoin, SeLoger, PAP, Logic-Immo, 
-                        Bien'ici, Orpi, Century 21, Laforêt, Figaro Immo, etc.
-                    </p>
-                    <p class="text-gray-500 text-xs mt-2">
-                        <strong>URL :</strong> <code class="bg-gray-100 px-1 rounded">https://api.notif.immo</code><br>
-                        <strong>Coût :</strong> ~30€/mois<br>
-                        <strong>Documentation :</strong> <a href="https://www.melo.io" target="_blank" class="text-blue-600 hover:underline">melo.io</a>
-                    </p>
-                </div>
-                
                 <div class="border-l-4 border-green-500 pl-4">
                     <h3 class="font-semibold text-gray-900">DVF (Demandes de Valeurs Foncières)</h3>
                     <p class="text-gray-600 text-sm mt-1">
@@ -101,20 +88,14 @@
             <div class="prose prose-sm max-w-none text-gray-600">
                 <h3 class="text-lg font-semibold text-gray-900">Fonctionnement</h3>
                 <p>
-                    La recherche interroge l'API Melo.io en temps réel. Les annonces sont filtrées selon vos critères 
-                    et affichées avec pagination (50 résultats par page).
+                    La recherche scrape les annonces depuis les sites immobiliers (Leboncoin, SeLoger, etc.)
+                    et les affiche avec pagination (50 résultats par page).
                 </p>
-                
+
                 <h3 class="text-lg font-semibold text-gray-900 mt-4">Rayon de recherche</h3>
                 <p>
-                    Quand activé, la recherche utilise les coordonnées GPS de la ville sélectionnée et cherche 
+                    Quand activé, la recherche utilise les coordonnées GPS de la ville sélectionnée et cherche
                     dans un rayon de 1 à 100 km. Cela permet de trouver des biens dans les communes environnantes.
-                </p>
-                
-                <h3 class="text-lg font-semibold text-gray-900 mt-4">Autocomplete des villes</h3>
-                <p>
-                    L'autocomplétion utilise l'endpoint <code>/cities</code> de Melo.io qui retourne les villes 
-                    correspondant à votre saisie avec leurs coordonnées GPS et code INSEE.
                 </p>
             </div>
         </section>

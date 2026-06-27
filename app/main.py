@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import os
 
 from app.database import engine, Base
-from app.routers import search, favorites, properties, saved_searches
+from app.routers import search, favorites, saved_searches, listings
 
 
 @asynccontextmanager
@@ -34,8 +34,8 @@ templates = Jinja2Templates(directory=templates_path)
 # Include routers
 app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(favorites.router, prefix="/api/favorites", tags=["favorites"])
-app.include_router(properties.router, prefix="/api/properties", tags=["properties"])
 app.include_router(saved_searches.router, prefix="/api/saved-searches", tags=["saved-searches"])
+app.include_router(listings.router, prefix="/api/listings", tags=["listings"])
 
 
 @app.get("/")

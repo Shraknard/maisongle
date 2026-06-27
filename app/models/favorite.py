@@ -9,9 +9,7 @@ class Favorite(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     
-    # Melo.io property identifiers
     property_uuid = Column(String(255), unique=True, nullable=False, index=True)
-    advert_uuid = Column(String(255), nullable=True)
     
     # Basic property info
     title = Column(String(500), nullable=True)
@@ -52,10 +50,7 @@ class Favorite(Base):
     
     # URLs
     url = Column(String(1000), nullable=True)
-    pictures = Column(JSON, nullable=True)  # List of picture URLs
-    
-    # Raw data from Melo.io (for reference)
-    raw_data = Column(JSON, nullable=True)
+    pictures = Column(JSON, nullable=True)
     
     # Enrichment data
     zonage_abc = Column(String(5), nullable=True)  # A, B1, B2, C

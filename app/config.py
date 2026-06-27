@@ -10,11 +10,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql://postgres:postgres@localhost:5432/maisongle"
-    
-    # Melo.io API
-    melo_api_base_url: str = "https://api.notif.immo"
-    melo_api_key: str = ""
-    
+
     # Georisques API
     georisques_api_base_url: str = "https://georisques.gouv.fr/api/v1"
     

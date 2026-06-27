@@ -51,19 +51,11 @@ echo -e "${GREEN}Dépendances installées${NC}"
 # Check .env file
 echo -e "\n${YELLOW}4. Vérification de la configuration...${NC}"
 if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}Création du fichier .env depuis .env.example...${NC}"
-    if [ -f ".env.example" ]; then
-        cp .env.example .env
-        echo -e "${YELLOW}⚠️  Modifiez le fichier .env avec vos paramètres${NC}"
-    else
-        cat > .env << EOF
+    cat > .env << EOF
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/maisongle
-MELO_API_BASE_URL=https://api.notif.immo
-MELO_API_KEY=votre_cle_api
 GEORISQUES_API_BASE_URL=https://georisques.gouv.fr/api/v1
 EOF
-        echo -e "${YELLOW}⚠️  Fichier .env créé - Ajoutez votre clé API Melo${NC}"
-    fi
+    echo -e "${GREEN}Fichier .env créé${NC}"
 else
     echo -e "${GREEN}Fichier .env existant${NC}"
 fi
@@ -73,7 +65,7 @@ echo -e "\n${YELLOW}5. Vérification de PostgreSQL...${NC}"
 if command -v psql &> /dev/null; then
     echo -e "${GREEN}PostgreSQL détecté${NC}"
 else
-    echo -e "${YELLOW}⚠️  PostgreSQL non détecté - Assurez-vous qu'il est installé${NC}"
+    echo -e "${YELLOW}PostgreSQL non détecté - Assurez-vous qu'il est installé${NC}"
 fi
 
 # Check data files
@@ -82,18 +74,18 @@ DATA_DIR="data"
 MISSING_FILES=0
 
 if [ ! -f "$DATA_DIR/zonage_abc.xlsx" ]; then
-    echo -e "${YELLOW}⚠️  Manquant: zonage_abc.xlsx${NC}"
+    echo -e "${YELLOW}Manquant: zonage_abc.xlsx${NC}"
     MISSING_FILES=1
 fi
 
 if [ ! -f "$DATA_DIR/communesdvf2024.csv" ]; then
-    echo -e "${YELLOW}⚠️  Manquant: communesdvf2024.csv (données DVF)${NC}"
+    echo -e "${YELLOW}Manquant: communesdvf2024.csv (données DVF)${NC}"
     echo "   Télécharger depuis: https://www.data.gouv.fr/datasets/indicateurs-immobiliers-par-commune-et-par-annee-prix-et-volumes-sur-la-periode-2014-2024"
     MISSING_FILES=1
 fi
 
 if [ ! -f "$DATA_DIR/pred-app-mef-dhup.csv" ]; then
-    echo -e "${YELLOW}⚠️  Manquant: pred-app-mef-dhup.csv (données loyers)${NC}"
+    echo -e "${YELLOW}Manquant: pred-app-mef-dhup.csv (données loyers)${NC}"
     echo "   Télécharger depuis: https://www.data.gouv.fr/datasets/carte-des-loyers-indicateurs-de-loyers-dannonce-par-commune-en-2024/"
     MISSING_FILES=1
 fi
@@ -114,7 +106,7 @@ if [[ $REPLY =~ ^[Oo]$ ]]; then
     else
         echo -e "${RED}Fichier zonage_abc.xlsx manquant${NC}"
     fi
-    
+
     echo -e "\n${YELLOW}Import des données DVF...${NC}"
     if [ -f "$DATA_DIR/communesdvf2024.csv" ]; then
         python scripts/import_dvf.py
@@ -122,7 +114,7 @@ if [[ $REPLY =~ ^[Oo]$ ]]; then
     else
         echo -e "${RED}Fichier communesdvf2024.csv manquant${NC}"
     fi
-    
+
     echo -e "\n${YELLOW}Import des données de loyers...${NC}"
     if [ -f "$DATA_DIR/pred-app-mef-dhup.csv" ]; then
         python scripts/import_loyers.py

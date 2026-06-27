@@ -1,68 +1,89 @@
+import logging
 from fastapi import APIRouter, Query, Depends
 from typing import Optional, List, Dict
+from sqlalchemy import nullslast
 from sqlalchemy.orm import Session
-from app.services.melo import MeloService
-from app.database import get_db
-from app.models import DVFCommune, LoyerCommune
 
+from app.database import get_db
+from app.models import DVFCommune, LoyerCommune, Listing
+from app.scrapers.base import SearchCriteria
+from app.services.geo import search_communes, get_commune, reverse_commune
+from app.services.scrape import refresh_if_stale
+from app.services.listing_view import serialize_listing, price_drops
+
+logger = logging.getLogger("routers.search")
 router = APIRouter()
-melo_service = MeloService()
+
+PAGE_SIZE = 50
+_SORT_COLUMNS = {
+    "price": Listing.price,
+    "surface": Listing.surface,
+    "date": Listing.first_seen,
+}
+
+
+def normalize_insee_code(code: str) -> str:
+    """Normalize INSEE code - map Paris/Lyon/Marseille arrondissements to main city code."""
+    code = code.zfill(5)
+    if code.startswith('751') and len(code) == 5:
+        return '75056'
+    if code.startswith('6938') and len(code) == 5:
+        return '69123'
+    if code.startswith('132') and len(code) == 5 and code >= '13201' and code <= '13216':
+        return '13055'
+    return code
 
 
 @router.get("/locations")
-async def search_locations(q: str = Query(..., min_length=2, description="Search query for city name or zipcode")):
-    """Search for cities/locations by name or zipcode (autocomplete)."""
-    locations = await melo_service.search_locations(q)
-    return locations
+async def search_locations(q: str = Query(..., min_length=2)):
+    """City/postal-code autocomplete via the official geo.api.gouv.fr API."""
+    return await search_communes(q)
 
 
 @router.get("/")
-async def search_properties(
-    # Location filters
-    department: Optional[str] = Query(None, description="Department code (e.g., 77)"),
-    city_id: Optional[List[str]] = Query(None, description="City ID(s) from autocomplete (e.g., /cities/30950)"),
-    city_insee: Optional[str] = Query(None, description="City INSEE code"),
-    zipcode: Optional[str] = Query(None, description="Zipcode"),
-    lat: Optional[float] = Query(None, description="Latitude for radius search"),
-    lon: Optional[float] = Query(None, description="Longitude for radius search"),
-    radius: Optional[int] = Query(None, description="Radius in km (requires lat/lon)"),
-    
-    # Property filters
-    property_types: Optional[List[int]] = Query(None, description="List of property types: 0=apartment, 1=house, 2=parking, 3=land, 4=shop, 5=building, 6=loft"),
-    transaction_type: Optional[int] = Query(0, description="0=sale, 1=rent"),
-    
-    # Price filters
-    budget_min: Optional[int] = Query(None, description="Minimum price"),
-    budget_max: Optional[int] = Query(None, description="Maximum price"),
-    
-    # Surface filters
-    surface_min: Optional[int] = Query(None, description="Minimum surface (m²)"),
-    surface_max: Optional[int] = Query(None, description="Maximum surface (m²)"),
-    
-    # Room filters
-    room_min: Optional[int] = Query(None, description="Minimum rooms"),
-    room_max: Optional[int] = Query(None, description="Maximum rooms"),
-    bedroom_min: Optional[int] = Query(None, description="Minimum bedrooms"),
-    bedroom_max: Optional[int] = Query(None, description="Maximum bedrooms"),
-    
-    # Sorting
-    sort_by: Optional[str] = Query(None, description="Sort field: price, surface, date"),
-    sort_order: Optional[str] = Query(None, description="Sort order: asc, desc"),
-    
-    # Pagination
-    page: int = Query(1, ge=1, description="Page number"),
+async def search_listings(
+    transaction_type: int = 0,
+    department: Optional[str] = None,
+    budget_min: Optional[int] = None,
+    budget_max: Optional[int] = None,
+    surface_min: Optional[int] = None,
+    surface_max: Optional[int] = None,
+    room_min: Optional[int] = None,
+    room_max: Optional[int] = None,
+    bedroom_min: Optional[int] = None,
+    bedroom_max: Optional[int] = None,
+    city_id: Optional[List[str]] = Query(None),
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    radius: Optional[int] = None,
+    property_types: Optional[List[int]] = Query(None),
+    page: int = 1,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
+    db: Session = Depends(get_db),
 ):
-    """Search properties via Melo.io API."""
-    results = await melo_service.search_properties(
-        department=department,
-        city_id=city_id,
-        city_insee=city_insee,
-        zipcode=zipcode,
-        lat=lat,
-        lon=lon,
-        radius=radius,
-        property_types=property_types,
+    """Search locally stored listings, triggering a throttled scrape first.
+
+    The frontend sends INSEE codes as ``city_id`` (from the autocomplete). A
+    radius search sends ``lat``/``lon``; we reverse-geocode it to a commune.
+    """
+    # 1. Resolve target communes
+    communes = []
+    if city_id:
+        for cid in city_id:
+            insee = cid.split("/")[-1].strip()
+            commune = await get_commune(insee)
+            if commune:
+                communes.append(commune)
+    elif lat is not None and lon is not None:
+        commune = await reverse_commune(lat, lon)
+        if commune:
+            communes.append(commune)
+
+    criteria = SearchCriteria(
+        communes=communes,
         transaction_type=transaction_type,
+        property_types=property_types or [],
         budget_min=budget_min,
         budget_max=budget_max,
         surface_min=surface_min,
@@ -71,26 +92,60 @@ async def search_properties(
         room_max=room_max,
         bedroom_min=bedroom_min,
         bedroom_max=bedroom_max,
-        sort_by=sort_by,
-        sort_order=sort_order,
-        page=page,
     )
-    return results
 
+    # 2. Throttled on-demand scrape (only when we know which communes to scrape)
+    refresh_info = {"scraped": False}
+    if communes:
+        try:
+            refresh_info = await refresh_if_stale(db, criteria)
+        except Exception:  # noqa: BLE001 — never let a scrape failure break search
+            logger.exception("refresh a échoué, on sert le cache")
 
-def normalize_insee_code(code: str) -> str:
-    """Normalize INSEE code - map Paris/Lyon/Marseille arrondissements to main city code."""
-    code = code.zfill(5)
-    # Paris arrondissements (75101-75120) -> 75056
-    if code.startswith('751') and len(code) == 5:
-        return '75056'
-    # Lyon arrondissements (69381-69389) -> 69123
-    if code.startswith('6938') and len(code) == 5:
-        return '69123'
-    # Marseille arrondissements (13201-13216) -> 13055
-    if code.startswith('132') and len(code) == 5 and code >= '13201' and code <= '13216':
-        return '13055'
-    return code
+    # 3. Query the local DB
+    insee_list = [c.insee for c in communes]
+    if not insee_list and not department:
+        return {"total": 0, "page": page, "properties": [], "refresh": refresh_info}
+
+    query = db.query(Listing).filter(
+        Listing.active.is_(True),
+        Listing.transaction_type == transaction_type,
+    )
+    if insee_list:
+        query = query.filter(Listing.city_insee.in_(insee_list))
+    elif department:
+        query = query.filter(Listing.department_code == department)
+
+    if property_types:
+        query = query.filter(Listing.property_type.in_(property_types))
+    if budget_min is not None:
+        query = query.filter(Listing.price >= budget_min)
+    if budget_max is not None:
+        query = query.filter(Listing.price <= budget_max)
+    if surface_min is not None:
+        query = query.filter(Listing.surface >= surface_min)
+    if surface_max is not None:
+        query = query.filter(Listing.surface <= surface_max)
+    if room_min is not None:
+        query = query.filter(Listing.room >= room_min)
+    if room_max is not None:
+        query = query.filter(Listing.room <= room_max)
+    if bedroom_min is not None:
+        query = query.filter(Listing.bedroom >= bedroom_min)
+    if bedroom_max is not None:
+        query = query.filter(Listing.bedroom <= bedroom_max)
+
+    sort_col = _SORT_COLUMNS.get(sort_by, Listing.first_seen)
+    direction = sort_col.asc() if sort_order == "asc" else sort_col.desc()
+    query = query.order_by(nullslast(direction))
+
+    total = query.count()
+    listings = query.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
+
+    drops = price_drops(db, [listing.id for listing in listings])
+    properties = [serialize_listing(listing, drops.get(listing.id)) for listing in listings]
+
+    return {"total": total, "page": page, "properties": properties, "refresh": refresh_info}
 
 
 @router.get("/dvf/{insee_code}")
@@ -117,51 +172,45 @@ def get_dvf_data(insee_code: str, db: Session = Depends(get_db)):
 @router.post("/dvf/batch")
 def get_dvf_batch(insee_codes: List[str], db: Session = Depends(get_db)) -> Dict[str, dict]:
     """Get DVF data for multiple communes at once."""
-    # Normalize codes and keep mapping
-    code_mapping = {}  # original -> normalized
+    code_mapping = {}
     for code in insee_codes:
         original = code.zfill(5)
         normalized = normalize_insee_code(code)
         code_mapping[original] = normalized
-    
-    # Get unique normalized codes
+
     unique_codes = list(set(code_mapping.values()))
     dvfs = db.query(DVFCommune).filter(DVFCommune.insee_com.in_(unique_codes)).all()
-    
-    # Build lookup by normalized code
+
     dvf_lookup = {}
     for dvf in dvfs:
         dvf_lookup[dvf.insee_com] = {
             "prix_m2_moyen": dvf.prix_m2_moyen,
             "prix_moyen": dvf.prix_moyen,
         }
-    
-    # Return results mapped to original codes
+
     result = {}
     for original, normalized in code_mapping.items():
         if normalized in dvf_lookup:
             result[original] = dvf_lookup[normalized]
-    
+
     return result
 
 
 @router.get("/loyers/{insee_code}")
 def get_loyers_data(
-    insee_code: str, 
+    insee_code: str,
     type_bien: str = Query("appartement", description="Type: appartement, app_t1t2, app_t3plus, maison"),
     db: Session = Depends(get_db)
 ):
     """Get rental price data for a commune by INSEE code."""
-    # For loyers, data is available by arrondissement, so try exact code first
     code = insee_code.zfill(5)
     loyer = db.query(LoyerCommune).filter(
         LoyerCommune.insee_com == code,
         LoyerCommune.type_bien == type_bien
     ).first()
-    
-    # If not found and it's a main city code, try to get average of arrondissements
+
     if not loyer:
-        if code == '75056':  # Paris
+        if code == '75056':
             loyers = db.query(LoyerCommune).filter(
                 LoyerCommune.insee_com.like('751%'),
                 LoyerCommune.type_bien == type_bien
@@ -176,7 +225,7 @@ def get_loyers_data(
                     "nb_obs_commune": sum(l.nb_obs_commune or 0 for l in loyers),
                     "fiable": True,
                 }
-        elif code == '69123':  # Lyon
+        elif code == '69123':
             loyers = db.query(LoyerCommune).filter(
                 LoyerCommune.insee_com.like('6938%'),
                 LoyerCommune.type_bien == type_bien
@@ -191,7 +240,7 @@ def get_loyers_data(
                     "nb_obs_commune": sum(l.nb_obs_commune or 0 for l in loyers),
                     "fiable": True,
                 }
-        elif code == '13055':  # Marseille
+        elif code == '13055':
             loyers = db.query(LoyerCommune).filter(
                 LoyerCommune.insee_com.like('132%'),
                 LoyerCommune.insee_com >= '13201',
@@ -208,7 +257,7 @@ def get_loyers_data(
                     "nb_obs_commune": sum(l.nb_obs_commune or 0 for l in loyers),
                     "fiable": True,
                 }
-    
+
     if loyer:
         return {
             "insee_com": loyer.insee_com,
@@ -225,24 +274,23 @@ def get_loyers_data(
 
 @router.post("/loyers/batch")
 def get_loyers_batch(
-    insee_codes: List[str], 
+    insee_codes: List[str],
     type_bien: str = Query("appartement", description="Type: appartement, app_t1t2, app_t3plus, maison"),
     db: Session = Depends(get_db)
 ) -> Dict[str, dict]:
     """Get rental price data for multiple communes at once."""
-    # Normalize codes and keep mapping
     code_mapping = {}
     for code in insee_codes:
         original = code.zfill(5)
         normalized = normalize_insee_code(code)
         code_mapping[original] = normalized
-    
+
     unique_codes = list(set(code_mapping.values()))
     loyers = db.query(LoyerCommune).filter(
         LoyerCommune.insee_com.in_(unique_codes),
         LoyerCommune.type_bien == type_bien
     ).all()
-    
+
     loyer_lookup = {}
     for loyer in loyers:
         loyer_lookup[loyer.insee_com] = {
@@ -250,10 +298,10 @@ def get_loyers_batch(
             "loyer_m2_min": loyer.loyer_m2_min,
             "loyer_m2_max": loyer.loyer_m2_max,
         }
-    
+
     result = {}
     for original, normalized in code_mapping.items():
         if normalized in loyer_lookup:
             result[original] = loyer_lookup[normalized]
-    
+
     return result

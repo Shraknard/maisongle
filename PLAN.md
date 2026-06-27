@@ -37,14 +37,15 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
 - [x] Scraper **Bien'ici** (JSON ouvert) + registry
 
 ### 2. Câblage API + UI
-- [ ] Réécriture `routers/search.py` : `GET /api/search/` sert les listings depuis la DB + déclenche le refresh throttlé
-- [ ] `routers/search.py` : `GET /locations` rebranché sur `geo.api.gouv.fr`
-- [ ] Nouveau `routers/listings.py` : détail annonce (remplace `properties.py`) + `POST /hide`
-- [ ] `routers/favorites.py` : mise en favori par lookup du listing en DB (copie complète + enrichissement)
-- [ ] `main.py` : enregistrement du router listings
-- [ ] Frontend `index.html` : bouton « masquer », badge source, indicateur de baisse de prix
-- [ ] Frontend `property.html` : détail servi depuis la DB
+- [x] Réécriture `routers/search.py` : `GET /api/search/` sert les listings depuis la DB + déclenche le refresh throttlé
+- [x] `routers/search.py` : `GET /locations` rebranché sur `geo.api.gouv.fr`
+- [x] Nouveau `routers/listings.py` : détail annonce (remplace `properties.py`) + `POST /hide`
+- [x] `routers/favorites.py` : mise en favori par lookup du listing en DB (copie complète + enrichissement)
+- [x] `main.py` : enregistrement du router listings
+- [x] Frontend `index.html` : bouton « masquer », indicateur de baisse de prix
+- [x] Frontend `property.html` : détail servi depuis la DB (`/api/listings/{uuid}`)
 - [ ] Adaptation `saved_searches` (INSEE au lieu des reliquats Melo `city_id`)
+- [x] Test d'intégration du pipeline (scrape → DB → throttle → baisse de prix → masquage) ✅
 
 ### 3. Sources supplémentaires
 - [ ] Scraper **PAP** (HTML via selectolax)
@@ -52,6 +53,7 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
 - [ ] *Plus tard* : Leboncoin / SeLoger (DataDome via curl_cffi / Camoufox)
 
 ### 4. Finitions
-- [ ] Mise à jour `requirements.txt` + `install.sh`
-- [ ] Mise à jour `README.md` et `CLAUDE.md`
-- [ ] Nettoyage des reliquats Melo (config, schémas)
+- [x] Mise à jour `requirements.txt` (selectolax)
+- [x] Mise à jour `README.md`
+- [ ] Mise à jour `CLAUDE.md` (section « À faire »)
+- [ ] Nettoyage des reliquats Melo (schémas favoris legacy, `saved_searches.city_id`)

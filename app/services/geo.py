@@ -77,15 +77,40 @@ async def get_commune(insee: str) -> Optional[Commune]:
         logger.error("geo.api.gouv lookup INSEE %s a échoué: %s", insee, exc)
         return None
 
+    commune = _to_commune(data)
+    _COMMUNE_CACHE[insee] = commune
+    return commune
+
+
+async def reverse_commune(lat: float, lon: float) -> Optional[Commune]:
+    """Find the commune containing a coordinate (for radius searches)."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0, headers=HEADERS) as client:
+            resp = await client.get(
+                f"{GEO_BASE}/communes",
+                params={"lat": lat, "lon": lon, "fields": FIELDS},
+            )
+            resp.raise_for_status()
+            results = resp.json()
+    except httpx.HTTPError as exc:
+        logger.error("geo.api.gouv reverse (%s,%s) a échoué: %s", lat, lon, exc)
+        return None
+
+    if not results:
+        return None
+    commune = _to_commune(results[0])
+    _COMMUNE_CACHE[commune.insee] = commune
+    return commune
+
+
+def _to_commune(data: dict) -> Commune:
     centre = data.get("centre") or {}
     coords = centre.get("coordinates") or [None, None]
     cps = data.get("codesPostaux") or []
-    commune = Commune(
-        insee=data.get("code", insee),
+    return Commune(
+        insee=data.get("code", ""),
         name=data.get("nom", ""),
         zipcode=cps[0] if cps else None,
         latitude=coords[1],
         longitude=coords[0],
     )
-    _COMMUNE_CACHE[insee] = commune
-    return commune

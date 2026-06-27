@@ -283,20 +283,15 @@
     
     async function loadProperty() {
         try {
-            // First check if it's a favorite (has enriched data)
-            const favResponse = await fetch(`/api/favorites/${propertyUuid}`);
-            if (favResponse.ok) {
-                favoriteData = await favResponse.json();
-            }
-            
-            // Get property data from Melo API
-            const response = await fetch(`/api/properties/${propertyUuid}`);
-            
-            if (!response.ok) {
+            // Load listing from the local DB (enrichment included; from the
+            // favorite if saved, otherwise computed on the fly for this view).
+            const favResponse = await fetch(`/api/listings/${propertyUuid}`);
+            if (!favResponse.ok) {
                 throw new Error('Property not found');
             }
-            
-            propertyData = await response.json();
+
+            favoriteData = await favResponse.json();
+            propertyData = favoriteData;
             await displayProperty();
             
         } catch (error) {

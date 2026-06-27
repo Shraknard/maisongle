@@ -1,32 +1,26 @@
 # Maisongle
 
-Application de recherche immobilière avec enrichissement des données.
+Application de recherche immobilière avec enrichissement des données. Scraping direct des annonces depuis les sites immobiliers français.
 
 ## Stack technique
 
-- **Backend**: Python 3.10+ / FastAPI / uvicorn
-- **Base de données**: PostgreSQL
-- **Frontend**: Jinja2 templates / TailwindCSS / Leaflet (OpenStreetMap)
+- **Backend** : Python 3.10+ / FastAPI / uvicorn
+- **Base de données** : PostgreSQL
+- **Frontend** : Jinja2 templates / TailwindCSS / Leaflet (OpenStreetMap)
 
 ## Installation rapide
 
 ```bash
-# 1. Cloner le projet et se placer dans le dossier
 cd maisongle
 
-# 2. Configurer PostgreSQL
+# Créer la base PostgreSQL
 sudo -u postgres psql -c "CREATE DATABASE maisongle;"
 
-# 3. Lancer le script d'installation
+# Lancer l'installation
 ./install.sh
 ```
 
-Le script `install.sh` :
-- Crée l'environnement virtuel Python
-- Installe les dépendances
-- Crée le fichier `.env` si nécessaire
-- Vérifie les fichiers de données
-- Propose d'importer les données
+Le script `install.sh` crée l'environnement virtuel, installe les dépendances, génère le `.env` et propose d'importer les données.
 
 ## Installation manuelle
 
@@ -34,34 +28,29 @@ Le script `install.sh` :
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ### 2. Configuration
 
-Créer un fichier `.env` et remplir la clé d'API Melo:
+Créer un fichier `.env` :
 
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/maisongle
-MELO_API_BASE_URL=https://api.notif.immo
-MELO_API_KEY=votre_cle_api
 GEORISQUES_API_BASE_URL=https://georisques.gouv.fr/api/v1
 ```
 
-**Clé API Melo** (30€/mois) : https://www.melo.io/settings?apikeys
-
-### 3. Base de données PostgreSQL
+### 3. Base de données
 
 ```bash
-sudo -u postgres psql
-CREATE DATABASE maisongle;
-\q
+sudo -u postgres psql -c "CREATE DATABASE maisongle;"
 ```
 
 ## Données externes
 
 ### Zonage ABC (Pinel)
+
 Fichier inclus : `data/zonage_abc.xlsx`
 
 ```bash
@@ -69,16 +58,19 @@ python scripts/import_zonage.py
 ```
 
 ### Prix immobiliers (DVF)
+
 Source : [data.gouv.fr - Indicateurs immobiliers](https://www.data.gouv.fr/datasets/indicateurs-immobiliers-par-commune-et-par-annee-prix-et-volumes-sur-la-periode-2014-2024)
 
 1. Télécharger le CSV le plus récent
 2. Le renommer en `communesdvf2024.csv` et le placer dans `/data`
 3. Importer :
+
 ```bash
 python scripts/import_dvf.py
 ```
 
 ### Loyers moyens (Carte des Loyers)
+
 Source : [data.gouv.fr - Carte des Loyers 2024](https://www.data.gouv.fr/datasets/carte-des-loyers-indicateurs-de-loyers-dannonce-par-commune-en-2024/)
 
 Télécharger les 4 fichiers CSV et les placer dans `/data` :
@@ -92,9 +84,28 @@ python scripts/import_loyers.py
 ```
 
 ### Géorisques
-Données récupérées via l'API : https://www.georisques.gouv.fr/doc-api#/
 
-Aucune action requise - les données sont récupérées automatiquement pour les favoris.
+Données récupérées automatiquement via l'API : https://www.georisques.gouv.fr/doc-api#/
+
+## Recherche & scraping des annonces
+
+Les annonces sont récupérées par **scraping direct** des plateformes (ancien système Melo.io
+supprimé). Architecture :
+
+- **Stockage local** : les annonces sont normalisées et stockées en base (`listings`), avec
+  identité stable `(source, source_id)`, historique de prix (`price_history`) et liste de masquage
+  (`hidden`).
+- **Rafraîchissement à la demande** : pas de scheduler. Le scraping se déclenche au chargement de
+  la page de recherche, mais est **throttlé à 5 minutes par périmètre de recherche** : si le même
+  périmètre a été scrapé il y a moins de 5 min, on sert directement le cache en base.
+- **Autocomplétion des villes** : via l'API officielle [geo.api.gouv.fr](https://geo.api.gouv.fr)
+  (nom, code INSEE, code postal, coordonnées).
+- **Sources** : architecture modulaire (`app/scrapers/`), une classe par plateforme avec une
+  sortie normalisée commune. Source active : **Bien'ici** (endpoints JSON ouverts). Ajouter une
+  source = déposer un module et l'enregistrer dans `app/scrapers/registry.py`.
+
+> À exécuter depuis une **IP résidentielle** : les plateformes protégées (Leboncoin, SeLoger via
+> DataDome) bannissent rapidement les IP datacenter.
 
 ## Lancer l'application
 
@@ -107,11 +118,12 @@ L'application sera accessible sur http://localhost:8000
 
 ## Fonctionnalités
 
-- 🔍 Recherche d'annonces immobilières (vente/location)
-- 📍 Carte interactive avec POIs (transports, commerces, écoles...)
-- ⭐ Favoris avec enrichissement (zonage ABC, géorisques)
-- 📊 Indicateur de prix vs moyenne commune (DVF pour ventes, Carte des Loyers pour locations)
-- 🏠 Multi-sélection des types de biens
-- 📏 Recherche par rayon géographique
-- 💾 Sauvegarde des recherches
-- 🧮 Simulateur de prêt immobilier
+- Agrégation d'annonces par scraping direct, stockées et dédoublonnées en local
+- Rafraîchissement à la demande, throttlé à 5 min par périmètre de recherche
+- Historique de prix et indicateur de baisse depuis la première vue
+- Masquage définitif d'une annonce (ne réapparaît jamais, même après re-scrape)
+- Carte interactive avec POIs (transports, commerces, écoles...)
+- Favoris avec enrichissement automatique (zonage ABC, géorisques)
+- Indicateur de prix vs moyenne commune (DVF pour ventes, Carte des Loyers pour locations)
+- Sauvegarde des recherches
+- Simulateur de prêt immobilier
