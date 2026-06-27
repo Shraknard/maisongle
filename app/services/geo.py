@@ -23,6 +23,23 @@ FIELDS = "nom,code,codesPostaux,centre,population"
 _COMMUNE_CACHE: Dict[str, Commune] = {}
 
 
+def normalize_insee_code(code: str) -> str:
+    """Normalize INSEE code - map Paris/Lyon/Marseille arrondissements to main city code.
+
+    Bien'ici tags ads with the arrondissement INSEE (e.g. 69381 for Lyon 1er),
+    while ``reverse_commune``/autocomplete resolve to the parent commune (69123).
+    Both storage and search filtering must agree, so they both normalize.
+    """
+    code = code.zfill(5)
+    if code.startswith('751') and len(code) == 5:
+        return '75056'
+    if code.startswith('6938') and len(code) == 5:
+        return '69123'
+    if code.startswith('132') and len(code) == 5 and '13201' <= code <= '13216':
+        return '13055'
+    return code
+
+
 def _location_payload(commune: dict) -> dict:
     """Shape expected by the frontend autocomplete (legacy Melo-ish keys)."""
     centre = commune.get("centre") or {}

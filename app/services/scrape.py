@@ -18,6 +18,7 @@ from app.models.listing import Listing, PriceHistory, Hidden, ScrapeRun
 from app.scrapers.base import SearchCriteria, NormalizedListing
 from app.scrapers.registry import get_scrapers
 from app.services.dedup import geohash_encode, dedup_key
+from app.services.geo import normalize_insee_code
 
 logger = logging.getLogger("services.scrape")
 
@@ -138,5 +139,9 @@ def _upsert(
 def _apply(listing: Listing, item: NormalizedListing, gh, dk) -> None:
     for fld in _LISTING_FIELDS:
         setattr(listing, fld, getattr(item, fld))
+    # Normalize PLM arrondissement INSEE to the parent commune so listings are
+    # found when searching by the parent commune (matches the search filter).
+    if listing.city_insee:
+        listing.city_insee = normalize_insee_code(listing.city_insee)
     listing.geohash = gh
     listing.dedup_key = dk

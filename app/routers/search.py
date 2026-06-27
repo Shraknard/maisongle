@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import DVFCommune, LoyerCommune, Listing
 from app.scrapers.base import SearchCriteria
-from app.services.geo import search_communes, get_commune, reverse_commune
+from app.services.geo import search_communes, get_commune, reverse_commune, normalize_insee_code
 from app.services.scrape import refresh_if_stale
 from app.services.listing_view import serialize_listing, price_drops
 
@@ -20,18 +20,6 @@ _SORT_COLUMNS = {
     "surface": Listing.surface,
     "date": Listing.first_seen,
 }
-
-
-def normalize_insee_code(code: str) -> str:
-    """Normalize INSEE code - map Paris/Lyon/Marseille arrondissements to main city code."""
-    code = code.zfill(5)
-    if code.startswith('751') and len(code) == 5:
-        return '75056'
-    if code.startswith('6938') and len(code) == 5:
-        return '69123'
-    if code.startswith('132') and len(code) == 5 and code >= '13201' and code <= '13216':
-        return '13055'
-    return code
 
 
 @router.get("/locations")
@@ -103,7 +91,7 @@ async def search_listings(
             logger.exception("refresh a échoué, on sert le cache")
 
     # 3. Query the local DB
-    insee_list = [c.insee for c in communes]
+    insee_list = [normalize_insee_code(c.insee) for c in communes]
     if not insee_list and not department:
         return {"total": 0, "page": page, "properties": [], "refresh": refresh_info}
 
