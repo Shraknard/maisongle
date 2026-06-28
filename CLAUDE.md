@@ -76,7 +76,6 @@ LEBONCOIN_TRANSPORT=scrapfly          # "scrapfly" | "cookie"
 SCRAPFLY_API_KEY=
 # SCRAPFLY_COUNTRY=fr                  # exit résidentiel FR (Leboncoin est FR-only)
 # SCRAPFLY_PROXY_POOL=public_residential_pool
-# SCRAPFLY_RENDER_JS=false            # API JSON : pas de rendu navigateur
 # Transport "cookie" (fallback manuel) : coller un cookie datadome + son User-Agent
 # depuis sa propre session navigateur (lié à l'IP résidentielle de l'app).
 # LEBONCOIN_DATADOME=
@@ -100,11 +99,18 @@ complète et l'avancement. En résumé :
   (signature des critères) — pas de scheduler. Cache servi en deçà du throttle.
 - Sources actives : **Bien'ici** (JSON, httpx) et **PAP** (HTML selectolax + curl_cffi pour passer
   Cloudflare). Les annonces PAP n'ont pas de coordonnées (pas de marqueur carte).
-- Source optionnelle : **Leboncoin** (API JSON `finder/search`). Protégée par DataDome → franchie via un
-  **transport pluggable** (`scrapers/transport.py`) : `scrapfly` (Web Unlocker, IP résidentielle + ASP,
-  recommandé) ou `cookie` (datadome collé à la main, fallback). No-op tant qu'aucun transport n'est
-  configuré (jamais bloquant). Une requête par commune (INSEE de la commune cherchée, comme PAP) ; les
-  annonces portent des coordonnées (carte + rayon).
+- Source optionnelle : **Leboncoin** (API JSON `finder/search`, **validée en live**). Protégée par DataDome
+  → franchie via un **transport pluggable** (`scrapers/transport.py`) : `scrapfly` (Web Unlocker, IP
+  résidentielle + ASP, recommandé) ou `cookie` (datadome collé à la main, fallback). No-op tant qu'aucun
+  transport n'est configuré (jamais bloquant). Spécificités :
+  - Localisation : `locationType: "city"` avec `area: {lat, lng, radius}` (un point + rayon, **pas** un
+    polygone de commune ; un objet plat `{city, lat, lng}` renvoie 0). Le rayon (`COMMUNE_RADIUS_M`, 10 km)
+    ramène les communes voisines → « commune et alentours », taggées avec l'INSEE cherché (comme PAP).
+  - Les annonces portent des coordonnées (carte + rayon). La **recherche par rayon** fait **une seule**
+    requête `area` au centre (bien moins coûteux qu'une requête par commune énumérée).
+  - DataDome fait du **blocage furtif** (HTTP 200 + résultats vides) → retry de la 1ʳᵉ page
+    (`FIRST_PAGE_ATTEMPTS`), chaque retry passant par une IP résidentielle fraîche.
+  - `render_js` reste `False` (Scrapfly refuse le rendu JS en POST ; endpoint JSON de toute façon).
 - **Recherche par rayon** (lat/lon/radius) : **Bien'ici + Leboncoin** (sources avec coordonnées ; PAP exclu).
   `services/geo.communes_within_radius()` énumère les communes du rayon (préfiltre par centroïdes de
   départements, filtrage haversine, plafond 60 communes) ; Bien'ici combine leurs `zoneIds` en une requête ;

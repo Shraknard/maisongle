@@ -74,11 +74,18 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
     fournie par Scrapfly → **IP maison jamais exposée**, DataDome franchi côté Scrapfly, **zéro cookie/proxy
     à gérer**. `SCRAPFLY_API_KEY` requis. Volume throttlé (5 min) → coût ~quelques cents/mois.
   - `cookie` (fallback) — `curl_cffi` + cookie `datadome` collé à la main (lié à l'IP, refresh manuel).
-  - **Constat live** : DataDome bloque l'API en pur HTTP depuis une IP datacenter (403 `x-datadome:
-    protected`, redirection `captcha-delivery.com`, IP flaggée en quelques requêtes) → d'où le routage via
-    Scrapfly. Tout testé via mocks (sélection du transport, construction `ScrapeConfig`, parsing, bout-en-bout).
-    **Validation live à faire** avec une vraie clé Scrapfly.
+  - **Validé en live** (clé Scrapfly réelle) : DataDome franchi (HTTP 200, vraies annonces lyonnaises,
+    parsing complet prix/surface/pièces/DPE/coords/particulier-vs-agence). Apprentissages :
+    - Localisation : `locationType:"city"` + `area:{lat,lng,radius}` (point + rayon, **pas** polygone) —
+      un objet plat `{city,lat,lng}` renvoie 0. Rayon `COMMUNE_RADIUS_M` (10 km) → « commune et alentours ».
+      Recherche par rayon = **une seule** requête `area` au centre.
+    - DataDome **blocage furtif** (HTTP 200 + 0 résultat) → retry 1ʳᵉ page (`FIRST_PAGE_ATTEMPTS`),
+      chaque retry sur IP résidentielle fraîche. `render_js` interdit en POST → reste `False`.
+    - Constat initial : en pur HTTP depuis une IP datacenter, DataDome renvoie 403 `x-datadome: protected`
+      + `captcha-delivery.com` et flague l'IP en quelques requêtes → d'où le routage Scrapfly.
 - [ ] *Plus tard* : SeLoger (DataDome, HTML) — réutilisera le transport Scrapfly.
+- [ ] *Suivi Leboncoin* : surveiller coût/crédits Scrapfly (résidentiel + ASP + retries) et taux de
+  blocage furtif ; ajuster `COMMUNE_RADIUS_M` / `FIRST_PAGE_ATTEMPTS` si besoin.
 
 ### 4. Finitions
 - [x] Mise à jour `requirements.txt` (selectolax)

@@ -36,7 +36,6 @@ class Settings(BaseSettings):
     scrapfly_api_key: str = ""
     scrapfly_country: str = "fr"
     scrapfly_proxy_pool: str = "public_residential_pool"
-    scrapfly_render_js: bool = False
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),

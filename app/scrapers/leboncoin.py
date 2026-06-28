@@ -17,8 +17,18 @@ SEARCH_URL = "https://api.leboncoin.fr/finder/search"
 API_KEY = "ba0c2dad52b3ec"
 
 RESULTS_PER_PAGE = 35           # leboncoin's own page size
+# leboncoin's finder matches by a radius around a point (the "city" filter is a
+# point + radius, not a commune polygon), so a commune search pulls in nearby
+# communes within this radius — "commune et alentours", like PAP's proximity.
+COMMUNE_RADIUS_M = 10000
 MAX_PAGES = 8                   # personal-use cap: ~280 ads / commune / run
 REQUEST_DELAY = 1.0             # politeness pause between requests (seconds)
+# DataDome occasionally "stealth-blocks": HTTP 200 with an empty result set
+# instead of a 403. Each Scrapfly request uses a fresh residential IP, so an
+# empty first page is retried a few times to ride out a transient block (a truly
+# empty perimeter just costs these extra calls, bounded and rare).
+FIRST_PAGE_ATTEMPTS = 3
+RETRY_DELAY = 2.0
 
 # Our int transaction type -> leboncoin category id (9 = ventes, 10 = locations).
 CATEGORY = {0: "9", 1: "10"}
@@ -37,11 +47,6 @@ DEFAULT_LBC_TYPES = ["1", "2"]  # maison + appartement — the residential core
 
 # leboncoin real_estate_type value -> our int property type (response side).
 LBC_TO_TYPE = {"1": 1, "2": 0, "3": 3, "4": 2, "5": 4}
-
-
-def _dept(insee: Optional[str]) -> str:
-    insee = (insee or "").zfill(5)
-    return insee[:3] if insee[:2] in ("97", "98") else insee[:2]
 
 
 def _attrs(ad: dict) -> Dict[str, str]:
@@ -110,9 +115,11 @@ class LeboncoinScraper(BaseScraper):
             if not s.scrapfly_api_key:
                 logger.info("leboncoin: transport scrapfly sans clé API — ignoré")
                 return None
+            # render_js stays False: Scrapfly rejects JS rendering on POST, and
+            # the finder is a JSON endpoint that needs no rendering anyway.
             return ScrapflyTransport(
                 s.scrapfly_api_key, country=s.scrapfly_country,
-                proxy_pool=s.scrapfly_proxy_pool, render_js=s.scrapfly_render_js,
+                proxy_pool=s.scrapfly_proxy_pool,
             )
         if s.leboncoin_transport == "cookie":
             cookie = (s.leboncoin_datadome or "").strip()
@@ -129,29 +136,45 @@ class LeboncoinScraper(BaseScraper):
             return []
 
         results: List[NormalizedListing] = []
-        consecutive_failures = 0
         try:
-            for commune in criteria.communes:
-                try:
-                    ads = await self._fetch_commune(transport, criteria, commune)
-                    if ads is None:
-                        # Transport-level failure (blocked / quota / network).
-                        consecutive_failures += 1
-                        if consecutive_failures >= 2:
-                            logger.warning("leboncoin: 2 échecs consécutifs — stop")
-                            break
-                        continue
-                    consecutive_failures = 0
-                    logger.info("leboncoin: %s -> %d annonces", commune.name, len(ads))
+            if criteria.is_radius:
+                # One area search at the centre — far cheaper than one request per
+                # enumerated commune. Ads carry coordinates, so the DB read trims to
+                # the exact circle by haversine (no INSEE tag needed).
+                location = self._area_location(
+                    criteria.center_lat, criteria.center_lon, criteria.radius_km
+                )
+                ads = await self._fetch(transport, criteria, location, insee=None)
+                if ads:
+                    logger.info("leboncoin: rayon -> %d annonces", len(ads))
                     results.extend(ads)
-                except Exception as exc:  # noqa: BLE001 — isolate each commune
-                    logger.error("leboncoin: erreur pour %s: %s", commune.insee, exc)
-                    consecutive_failures += 1
-                    if consecutive_failures >= 2:
-                        logger.warning("leboncoin: 2 échecs consécutifs — stop")
-                        break
+            else:
+                results = await self._search_communes(transport, criteria)
         finally:
             await transport.aclose()
+        return results
+
+    async def _search_communes(
+        self, transport: JsonTransport, criteria: SearchCriteria
+    ) -> List[NormalizedListing]:
+        results: List[NormalizedListing] = []
+        consecutive_failures = 0
+        for commune in criteria.communes:
+            try:
+                location = self._city_location(commune)
+                ads = await self._fetch(transport, criteria, location, insee=commune.insee)
+            except Exception as exc:  # noqa: BLE001 — isolate each commune
+                logger.error("leboncoin: erreur pour %s: %s", commune.insee, exc)
+                ads = None
+            if ads is None:  # transport failure — bail out before we trip rate limits
+                consecutive_failures += 1
+                if consecutive_failures >= 2:
+                    logger.warning("leboncoin: 2 échecs consécutifs — stop")
+                    break
+                continue
+            consecutive_failures = 0
+            logger.info("leboncoin: %s -> %d annonces", commune.name, len(ads))
+            results.extend(ads)
         return results
 
     def _lbc_types(self, criteria: SearchCriteria) -> List[str]:
@@ -163,7 +186,33 @@ class LeboncoinScraper(BaseScraper):
         ))
         return out or DEFAULT_LBC_TYPES
 
-    def _build_filters(self, criteria: SearchCriteria, commune: Commune) -> dict:
+    @staticmethod
+    def _city_location(commune: Commune) -> dict:
+        """leboncoin location entry for a commune: a point + radius (not a polygon).
+
+        The lat/lng/radius must be nested under ``area`` and paired with a label —
+        a flat ``{city, lat, lng}`` is silently ignored and returns 0 results.
+        """
+        return {
+            "locationType": "city",
+            "city": commune.name,
+            "label": f"{commune.name} (toute la ville)",
+            "area": {
+                "lat": commune.latitude,
+                "lng": commune.longitude,
+                "radius": COMMUNE_RADIUS_M,
+            },
+        }
+
+    @staticmethod
+    def _area_location(lat: float, lon: float, radius_km: float) -> dict:
+        """leboncoin location entry for a radius search (point + radius in metres)."""
+        return {
+            "locationType": "city",
+            "area": {"lat": lat, "lng": lon, "radius": int(radius_km * 1000)},
+        }
+
+    def _build_filters(self, criteria: SearchCriteria, location: dict) -> dict:
         ranges: dict = {}
         if criteria.budget_min is not None or criteria.budget_max is not None:
             ranges["price"] = {}
@@ -190,28 +239,20 @@ class LeboncoinScraper(BaseScraper):
                 "ad_type": ["offer"],
                 "real_estate_type": self._lbc_types(criteria),
             },
-            "location": {
-                "locations": [{
-                    "locationType": "city",
-                    "city": commune.name,
-                    "zipcode": commune.zipcode or "",
-                    "department_id": _dept(commune.insee),
-                    "lat": commune.latitude,
-                    "lng": commune.longitude,
-                    "radius": 0,
-                }],
-            },
+            "location": {"locations": [location]},
             "ranges": ranges,
         }
 
-    async def _fetch_commune(
-        self, transport: JsonTransport, criteria: SearchCriteria, commune: Commune,
+    async def _fetch(
+        self, transport: JsonTransport, criteria: SearchCriteria,
+        location: dict, insee: Optional[str],
     ) -> Optional[List[NormalizedListing]]:
-        """Fetch ads for one commune. Returns None on transport failure (vs [] for
-        a commune with no ads) so the caller can distinguish and stop early."""
+        """Fetch ads for one location (commune or radius), tagging each with
+        ``insee``. Returns None on transport failure (vs [] for no ads) so the
+        caller can distinguish a block from a genuinely empty perimeter."""
         listings: List[NormalizedListing] = []
         seen: set[str] = set()
-        filters = self._build_filters(criteria, commune)
+        filters = self._build_filters(criteria, location)
 
         for page in range(MAX_PAGES):
             payload = {
@@ -222,7 +263,17 @@ class LeboncoinScraper(BaseScraper):
                 "sort_by": "time",
                 "sort_order": "desc",
             }
-            data = await transport.post_json(SEARCH_URL, payload, self.BASE_HEADERS)
+            # Retry an empty/failed first page (likely a DataDome stealth-block);
+            # later pages are taken at face value.
+            attempts = FIRST_PAGE_ATTEMPTS if page == 0 else 1
+            data = None
+            for attempt in range(attempts):
+                data = await transport.post_json(SEARCH_URL, payload, self.BASE_HEADERS)
+                if data and data.get("ads"):
+                    break
+                if attempt + 1 < attempts:
+                    await asyncio.sleep(RETRY_DELAY)
+
             if not data:  # blocked, error or empty — transport already logged
                 if page == 0:
                     return None  # first page failed → signal transport failure
@@ -232,7 +283,7 @@ class LeboncoinScraper(BaseScraper):
             if not ads:
                 break
             for ad in ads:
-                item = self._normalize(ad, criteria, commune)
+                item = self._normalize(ad, criteria, insee)
                 if item and item.source_id not in seen:
                     seen.add(item.source_id)
                     listings.append(item)
@@ -244,7 +295,7 @@ class LeboncoinScraper(BaseScraper):
         return listings
 
     def _normalize(self, ad: dict, criteria: SearchCriteria,
-                   commune: Commune) -> Optional[NormalizedListing]:
+                   insee: Optional[str]) -> Optional[NormalizedListing]:
         list_id = ad.get("list_id")
         if not list_id:
             return None
@@ -282,10 +333,14 @@ class LeboncoinScraper(BaseScraper):
             floor=_to_int(attrs.get("floor_number")),
             property_type=property_type,
             transaction_type=criteria.transaction_type,
-            city_name=loc.get("city") or commune.name,
-            city_zipcode=loc.get("zipcode") or commune.zipcode,
-            city_insee=commune.insee,  # normalized to parent commune by scrape._apply
-            department_code=loc.get("department_id") or _dept(commune.insee),
+            city_name=loc.get("city"),
+            city_zipcode=loc.get("zipcode"),
+            # Tag with the searched commune (None for radius). leboncoin gives no
+            # INSEE, and its radius match bleeds into nearby communes, so all hits
+            # are tagged with the searched commune — like PAP. normalize_insee in
+            # scrape._apply maps it to the parent commune.
+            city_insee=insee,
+            department_code=loc.get("department_id"),
             latitude=_to_float(loc.get("lat")),
             longitude=_to_float(loc.get("lng")),
             energy_category=(attrs.get("energy_rate") or "").upper() or None,
