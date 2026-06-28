@@ -63,19 +63,22 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
   - Côté lecture, `routers/search.py` filtre par distance haversine SQL (préfiltre bbox + cercle exact), pas par INSEE.
   - PAP est exclu du rayon (pas de coordonnées). Au passage : correctif `_int()` pour les `roomsQuantity`/`floor`
     renvoyés en plage (`[2, 4]`, programmes neufs) qui cassaient l'insert sur colonne entière.
-- [x] Scraper **Leboncoin** (API JSON `finder/search`, `curl_cffi`) — DataDome contourné par
-  **cookie `datadome` injecté en configuration** (`leboncoin_datadome` / `leboncoin_user_agent`,
-  source désactivée tant que le cookie est absent → no-op, ne casse jamais une recherche).
-  Une requête par commune (tag INSEE de la commune cherchée, comme PAP) ; contrairement à PAP,
-  les annonces portent des coordonnées → carte + recherche par rayon. Mapping catégorie (vente 9 /
-  location 10), `real_estate_type` et `attributes` (square/rooms/bedrooms/energy_rate/ges).
-  - **Validation live impossible depuis cette IP** : DataDome bloque l'API (403 `x-datadome: protected`,
-    redirection `captcha-delivery.com`) et a flaggé l'IP datacenter (page d'accueil 200 → 403 en
-    quelques requêtes). Le cookie `datadome` obtenu en pur HTTP n'est qu'une graine non validée :
-    le franchir exige l'exécution du JS DataDome dans un vrai navigateur. **À valider depuis une IP
-    résidentielle** en collant un cookie `datadome` + son User-Agent depuis sa propre session navigateur
-    (l'app tournant en local sur la même IP). Évolution possible : auto-solveur Camoufox (cookie + TTL).
-- [ ] *Plus tard* : SeLoger (DataDome, HTML) ; auto-solveur Camoufox pour rafraîchir le cookie Leboncoin.
+- [x] Scraper **Leboncoin** (API JSON `finder/search`) — une requête par commune (tag INSEE de la commune
+  cherchée, comme PAP) ; contrairement à PAP, les annonces portent des coordonnées → carte + recherche
+  par rayon. Mapping catégorie (vente 9 / location 10), `real_estate_type` et `attributes`
+  (square/rooms/bedrooms/energy_rate/ges).
+- [x] **Transport anti-bot pluggable** (`scrapers/transport.py`) pour franchir DataDome, source no-op tant
+  qu'aucun transport n'est configuré (ne casse jamais une recherche) :
+  - `scrapfly` (**recommandé**) — Scrapfly Web Unlocker : requête `finder/search` routée via leur API
+    (`asp=true`, `proxy_pool=public_residential_pool`, `country=fr`, `render_js=false`). IP résidentielle
+    fournie par Scrapfly → **IP maison jamais exposée**, DataDome franchi côté Scrapfly, **zéro cookie/proxy
+    à gérer**. `SCRAPFLY_API_KEY` requis. Volume throttlé (5 min) → coût ~quelques cents/mois.
+  - `cookie` (fallback) — `curl_cffi` + cookie `datadome` collé à la main (lié à l'IP, refresh manuel).
+  - **Constat live** : DataDome bloque l'API en pur HTTP depuis une IP datacenter (403 `x-datadome:
+    protected`, redirection `captcha-delivery.com`, IP flaggée en quelques requêtes) → d'où le routage via
+    Scrapfly. Tout testé via mocks (sélection du transport, construction `ScrapeConfig`, parsing, bout-en-bout).
+    **Validation live à faire** avec une vraie clé Scrapfly.
+- [ ] *Plus tard* : SeLoger (DataDome, HTML) — réutilisera le transport Scrapfly.
 
 ### 4. Finitions
 - [x] Mise à jour `requirements.txt` (selectolax)

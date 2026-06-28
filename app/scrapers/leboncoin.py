@@ -4,19 +4,17 @@ import asyncio
 import logging
 from typing import Dict, List, Optional
 
-from curl_cffi.requests import AsyncSession
-
 from app.config import get_settings
 from app.scrapers.base import BaseScraper, SearchCriteria, NormalizedListing, Commune
+from app.scrapers.transport import (
+    JsonTransport, DirectCookieTransport, ScrapflyTransport,
+)
 
 logger = logging.getLogger("scrapers.leboncoin")
 
 SEARCH_URL = "https://api.leboncoin.fr/finder/search"
 # Public web client key shipped in the leboncoin SPA bundle (not a secret).
 API_KEY = "ba0c2dad52b3ec"
-# curl_cffi replays a real Chrome TLS fingerprint; the datadome cookie is also
-# bound to a Chrome UA, so we impersonate Chrome to stay coherent.
-IMPERSONATE = "chrome"
 
 RESULTS_PER_PAGE = 35           # leboncoin's own page size
 MAX_PAGES = 8                   # personal-use cap: ~280 ads / commune / run
@@ -81,12 +79,11 @@ def _to_float(value) -> Optional[float]:
 class LeboncoinScraper(BaseScraper):
     """Scraper for leboncoin.fr — JSON ``finder/search`` API behind DataDome.
 
-    DataDome blocks the API unless the request carries a ``datadome`` cookie that
-    was validated by its in-browser JS challenge. That cookie cannot be minted
-    with an HTTP client alone, so it is supplied via settings
-    (``leboncoin_datadome`` / ``leboncoin_user_agent``) — paste one from your own
-    browser session. Without a cookie the scraper is a no-op, so it never breaks a
-    search; the scrape service isolates it per source anyway.
+    DataDome blocks the API unless the request is fronted by an unblocking
+    transport (see ``transport.py``): Scrapfly's Web Unlocker (residential IP +
+    ASP, recommended) or a manually injected ``datadome`` cookie (fallback). The
+    transport is chosen from settings; without one the scraper is a no-op, so it
+    never breaks a search, and the scrape service isolates it per source anyway.
 
     Flow: one ``finder/search`` per commune (paginated), tagging each ad with the
     searched commune's INSEE so the DB read filter (``city_insee``) matches — same
@@ -95,43 +92,53 @@ class LeboncoinScraper(BaseScraper):
     """
     source = "leboncoin"
 
-    def __init__(self, timeout: float = 30.0):
-        self.timeout = timeout
+    # App headers leboncoin's SPA sends with every finder/search call. The
+    # transport adds whatever it needs on top (cookie, or its own UA/fingerprint).
+    BASE_HEADERS = {
+        "Accept": "*/*",
+        "api_key": API_KEY,
+        "Origin": "https://www.leboncoin.fr",
+        "Referer": "https://www.leboncoin.fr/recherche",
+    }
 
-    def _config(self):
+    def _transport(self) -> Optional[JsonTransport]:
+        """Build the configured transport, or None if the source is disabled."""
         s = get_settings()
-        cookie = (s.leboncoin_datadome or "").strip()
-        if not s.leboncoin_enabled or not cookie:
+        if not s.leboncoin_enabled:
             return None
-        return cookie, s.leboncoin_user_agent
+        if s.leboncoin_transport == "scrapfly":
+            if not s.scrapfly_api_key:
+                logger.info("leboncoin: transport scrapfly sans clé API — ignoré")
+                return None
+            return ScrapflyTransport(
+                s.scrapfly_api_key, country=s.scrapfly_country,
+                proxy_pool=s.scrapfly_proxy_pool, render_js=s.scrapfly_render_js,
+            )
+        if s.leboncoin_transport == "cookie":
+            cookie = (s.leboncoin_datadome or "").strip()
+            if not cookie:
+                logger.info("leboncoin: transport cookie sans datadome — ignoré")
+                return None
+            return DirectCookieTransport(cookie, s.leboncoin_user_agent)
+        logger.warning("leboncoin: transport inconnu %r — ignoré", s.leboncoin_transport)
+        return None
 
     async def search(self, criteria: SearchCriteria) -> List[NormalizedListing]:
-        cfg = self._config()
-        if cfg is None:
-            logger.info("leboncoin: désactivé (pas de cookie datadome) — ignoré")
+        transport = self._transport()
+        if transport is None or not criteria.communes:
             return []
-        if not criteria.communes:
-            return []
-        datadome, user_agent = cfg
-        headers = {
-            "User-Agent": user_agent,
-            "Accept": "*/*",
-            "Content-Type": "application/json",
-            "api_key": API_KEY,
-            "Origin": "https://www.leboncoin.fr",
-            "Referer": "https://www.leboncoin.fr/recherche",
-            "Cookie": f"datadome={datadome}",
-        }
 
         results: List[NormalizedListing] = []
-        async with AsyncSession() as session:
+        try:
             for commune in criteria.communes:
                 try:
-                    ads = await self._fetch_commune(session, headers, criteria, commune)
+                    ads = await self._fetch_commune(transport, criteria, commune)
                     logger.info("leboncoin: %s -> %d annonces", commune.name, len(ads))
                     results.extend(ads)
                 except Exception as exc:  # noqa: BLE001 — isolate each commune
                     logger.error("leboncoin: erreur pour %s: %s", commune.insee, exc)
+        finally:
+            await transport.aclose()
         return results
 
     def _lbc_types(self, criteria: SearchCriteria) -> List[str]:
@@ -185,8 +192,7 @@ class LeboncoinScraper(BaseScraper):
         }
 
     async def _fetch_commune(
-        self, session: AsyncSession, headers: dict,
-        criteria: SearchCriteria, commune: Commune,
+        self, transport: JsonTransport, criteria: SearchCriteria, commune: Commune,
     ) -> List[NormalizedListing]:
         listings: List[NormalizedListing] = []
         seen: set[str] = set()
@@ -201,17 +207,8 @@ class LeboncoinScraper(BaseScraper):
                 "sort_by": "time",
                 "sort_order": "desc",
             }
-            resp = await session.post(
-                SEARCH_URL, json=payload, headers=headers,
-                impersonate=IMPERSONATE, timeout=self.timeout,
-            )
-            if resp.status_code != 200:
-                logger.warning("leboncoin: %s -> HTTP %s", commune.name, resp.status_code)
-                break
-
-            data = resp.json()
-            if isinstance(data, dict) and "captcha" in (data.get("url") or ""):
-                logger.warning("leboncoin: cookie datadome rejeté (captcha) — stop")
+            data = await transport.post_json(SEARCH_URL, payload, self.BASE_HEADERS)
+            if not data:  # blocked, error or empty — transport already logged
                 break
 
             ads = data.get("ads") or []
