@@ -129,7 +129,9 @@ async def search_listings(
     refresh_info = {"scraped": False}
     if communes:
         try:
-            sources = ["bienici"] if is_radius else None
+            # Radius search needs coordinates: Bien'ici and Leboncoin carry them,
+            # PAP does not, so it is excluded from radius runs.
+            sources = ["bienici", "leboncoin"] if is_radius else None
             refresh_info = await refresh_if_stale(db, criteria, sources=sources)
         except Exception:  # noqa: BLE001 — never let a scrape failure break search
             logger.exception("refresh a échoué, on sert le cache")

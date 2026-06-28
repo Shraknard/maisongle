@@ -28,6 +28,7 @@ app/
     base.py            # BaseScraper, SearchCriteria, NormalizedListing, Commune
     bienici.py         # Bien'ici (JSON ouvert, httpx)
     pap.py             # PAP / Particulier à Particulier (HTML selectolax, curl_cffi/Cloudflare)
+    leboncoin.py       # Leboncoin (API JSON finder/search, curl_cffi ; DataDome via cookie injecté)
     registry.py        # Enregistrement des scrapers actifs
   services/            # Logique métier
     scrape.py          # Refresh throttlé (5 min/périmètre), upsert + historique de prix
@@ -65,6 +66,13 @@ Fichier `.env` à la racine :
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/maisongle
 GEORISQUES_API_BASE_URL=https://georisques.gouv.fr/api/v1
+
+# Leboncoin (optionnel) — désactivé tant que le cookie datadome est vide.
+# DataDome lie le cookie à l'IP + au navigateur : coller un cookie `datadome` et son
+# User-Agent depuis sa propre session navigateur (même IP résidentielle que l'app).
+LEBONCOIN_ENABLED=false
+LEBONCOIN_DATADOME=
+LEBONCOIN_USER_AGENT=
 ```
 
 ## Conventions
@@ -84,7 +92,11 @@ complète et l'avancement. En résumé :
   (signature des critères) — pas de scheduler. Cache servi en deçà du throttle.
 - Sources actives : **Bien'ici** (JSON, httpx) et **PAP** (HTML selectolax + curl_cffi pour passer
   Cloudflare). Les annonces PAP n'ont pas de coordonnées (pas de marqueur carte).
-- **Recherche par rayon** (lat/lon/radius) : Bien'ici uniquement (PAP n'a pas de coordonnées).
+- Source optionnelle : **Leboncoin** (API JSON `finder/search`, curl_cffi). Protégée par DataDome →
+  no-op tant que `LEBONCOIN_DATADOME` n'est pas renseigné (cookie injecté en config, lié à l'IP). Une
+  requête par commune (INSEE de la commune cherchée, comme PAP) ; les annonces portent des coordonnées
+  (carte + rayon).
+- **Recherche par rayon** (lat/lon/radius) : **Bien'ici + Leboncoin** (sources avec coordonnées ; PAP exclu).
   `services/geo.communes_within_radius()` énumère les communes du rayon (préfiltre par centroïdes de
   départements, filtrage haversine, plafond 60 communes) ; Bien'ici combine leurs `zoneIds` en une requête ;
   `routers/search.py` filtre les résultats par distance haversine SQL.
@@ -92,5 +104,8 @@ complète et l'avancement. En résumé :
 
 ## A faire
 
-- Sources protégées par DataDome (Leboncoin, SeLoger) — repoussées (curl_cffi / Camoufox).
-  À exécuter depuis une IP résidentielle.
+- **Leboncoin** : code prêt (scraper + cookie injecté), mais **validation live à faire depuis une IP
+  résidentielle** — DataDome bloque l'API depuis une IP datacenter. Coller un cookie `datadome` + son
+  User-Agent depuis sa propre session navigateur, puis `LEBONCOIN_ENABLED=true`.
+- **SeLoger** : repoussé (DataDome, HTML). Auto-solveur Camoufox (cookie + TTL) pour automatiser le
+  rafraîchissement du cookie Leboncoin.

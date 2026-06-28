@@ -63,7 +63,19 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
   - Côté lecture, `routers/search.py` filtre par distance haversine SQL (préfiltre bbox + cercle exact), pas par INSEE.
   - PAP est exclu du rayon (pas de coordonnées). Au passage : correctif `_int()` pour les `roomsQuantity`/`floor`
     renvoyés en plage (`[2, 4]`, programmes neufs) qui cassaient l'insert sur colonne entière.
-- [ ] *Plus tard* : Leboncoin / SeLoger (DataDome via curl_cffi / Camoufox)
+- [x] Scraper **Leboncoin** (API JSON `finder/search`, `curl_cffi`) — DataDome contourné par
+  **cookie `datadome` injecté en configuration** (`leboncoin_datadome` / `leboncoin_user_agent`,
+  source désactivée tant que le cookie est absent → no-op, ne casse jamais une recherche).
+  Une requête par commune (tag INSEE de la commune cherchée, comme PAP) ; contrairement à PAP,
+  les annonces portent des coordonnées → carte + recherche par rayon. Mapping catégorie (vente 9 /
+  location 10), `real_estate_type` et `attributes` (square/rooms/bedrooms/energy_rate/ges).
+  - **Validation live impossible depuis cette IP** : DataDome bloque l'API (403 `x-datadome: protected`,
+    redirection `captcha-delivery.com`) et a flaggé l'IP datacenter (page d'accueil 200 → 403 en
+    quelques requêtes). Le cookie `datadome` obtenu en pur HTTP n'est qu'une graine non validée :
+    le franchir exige l'exécution du JS DataDome dans un vrai navigateur. **À valider depuis une IP
+    résidentielle** en collant un cookie `datadome` + son User-Agent depuis sa propre session navigateur
+    (l'app tournant en local sur la même IP). Évolution possible : auto-solveur Camoufox (cookie + TTL).
+- [ ] *Plus tard* : SeLoger (DataDome, HTML) ; auto-solveur Camoufox pour rafraîchir le cookie Leboncoin.
 
 ### 4. Finitions
 - [x] Mise à jour `requirements.txt` (selectolax)
