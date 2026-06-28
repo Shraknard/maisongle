@@ -103,6 +103,7 @@ class ScrapflyTransport:
         self.country = country
         self.proxy_pool = proxy_pool
         self.render_js = render_js
+        self.total_cost = 0  # Scrapfly credits billed over this transport's life
 
     async def post_json(self, url: str, body: dict, headers: dict) -> Optional[dict]:
         config = self._ScrapeConfig(
@@ -123,6 +124,12 @@ class ScrapflyTransport:
             logger.error("transport(scrapfly): échec sur %s: %s", url, exc)
             return None
 
+        # A returned response is billed even when DataDome stealth-blocks (200 +
+        # empty); failed scrapes raise above and are not billed.
+        cost = getattr(res, "cost", None) or 0
+        self.total_cost += cost
+        logger.debug("transport(scrapfly): %s crédits (cumul %s)", cost, self.total_cost)
+
         status = getattr(res, "upstream_status_code", None)
         content = (res.scrape_result or {}).get("content") if res.scrape_result else None
         if status and status != 200:
@@ -141,6 +148,8 @@ class ScrapflyTransport:
         return data if isinstance(data, dict) else None
 
     async def aclose(self) -> None:
+        if self.total_cost:
+            logger.info("transport(scrapfly): %d crédits utilisés sur ce run", self.total_cost)
         close = getattr(self._client, "close", None)
         if callable(close):
             try:

@@ -21,7 +21,7 @@ RESULTS_PER_PAGE = 35           # leboncoin's own page size
 # point + radius, not a commune polygon), so a commune search pulls in nearby
 # communes within this radius — "commune et alentours", like PAP's proximity.
 COMMUNE_RADIUS_M = 10000
-MAX_PAGES = 8                   # personal-use cap: ~280 ads / commune / run
+MAX_PAGES = 5                   # personal-use cap: ~175 ads / commune / run
 REQUEST_DELAY = 1.0             # politeness pause between requests (seconds)
 # DataDome occasionally "stealth-blocks": HTTP 200 with an empty result set
 # instead of a 403. Each Scrapfly request uses a fresh residential IP, so an
@@ -106,6 +106,10 @@ class LeboncoinScraper(BaseScraper):
         "Referer": "https://www.leboncoin.fr/recherche",
     }
 
+    # Scrapfly credits billed by the last search() run (None if not via Scrapfly),
+    # surfaced into scrape_runs.detail by the scrape service.
+    last_cost: Optional[int] = None
+
     def _transport(self) -> Optional[JsonTransport]:
         """Build the configured transport, or None if the source is disabled."""
         s = get_settings()
@@ -151,6 +155,7 @@ class LeboncoinScraper(BaseScraper):
             else:
                 results = await self._search_communes(transport, criteria)
         finally:
+            self.last_cost = getattr(transport, "total_cost", None)
             await transport.aclose()
         return results
 

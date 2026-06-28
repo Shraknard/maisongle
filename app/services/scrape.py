@@ -78,7 +78,12 @@ async def _run(
         try:
             items = await scraper.search(criteria)
             n_new = _upsert(db, scraper.source, items, hidden)
-            detail[scraper.source] = {"found": len(items), "new": n_new}
+            entry = {"found": len(items), "new": n_new}
+            # Paid transports (Scrapfly) expose the credits billed by this run.
+            cost = getattr(scraper, "last_cost", None)
+            if cost:
+                entry["cost_credits"] = cost
+            detail[scraper.source] = entry
             total_found += len(items)
             total_new += n_new
             logger.info("%s: %d annonces, %d nouvelles", scraper.source, len(items), n_new)
