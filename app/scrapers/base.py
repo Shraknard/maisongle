@@ -41,6 +41,10 @@ class SearchCriteria:
     center_lat: Optional[float] = None
     center_lon: Optional[float] = None
     radius_km: Optional[float] = None
+    # Runtime-only (NOT part of the perimeter signature): set by the scrape
+    # service when this perimeter has never been scraped, so scrapers backfill the
+    # existing catalogue deeply on the first run and only the newest pages after.
+    first_scrape: bool = False
 
     @property
     def is_radius(self) -> bool:

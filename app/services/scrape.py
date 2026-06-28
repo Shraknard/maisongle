@@ -59,6 +59,9 @@ async def refresh_if_stale(
         if age < timedelta(seconds=ttl):
             return {"scraped": False, "age_seconds": int(age.total_seconds())}
 
+    # No prior run for this perimeter -> first scrape: backfill the catalogue
+    # deeply; later refreshes only fetch the newest pages.
+    criteria.first_scrape = last is None
     return await _run(db, criteria, signature, sources)
 
 

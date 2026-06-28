@@ -21,7 +21,11 @@ RESULTS_PER_PAGE = 35           # leboncoin's own page size
 # point + radius, not a commune polygon), so a commune search pulls in nearby
 # communes within this radius — "commune et alentours", like PAP's proximity.
 COMMUNE_RADIUS_M = 10000
-MAX_PAGES = 5                   # personal-use cap: ~175 ads / commune / run
+MAX_PAGES = 5                   # refresh cap: ~175 newest ads / commune / run
+# First scrape of a perimeter backfills the existing catalogue. leboncoin's
+# finder hard-caps pagination at max_pages=100 (~3500 ads), the most reachable
+# for one query — filtered searches return fewer and stop early at their total.
+MAX_PAGES_FIRST = 100
 REQUEST_DELAY = 1.0             # politeness pause between requests (seconds)
 # DataDome occasionally "stealth-blocks": HTTP 200 with an empty result set
 # instead of a 403. Each Scrapfly request uses a fresh residential IP, so an
@@ -138,6 +142,9 @@ class LeboncoinScraper(BaseScraper):
         transport = self._transport()
         if transport is None or not criteria.communes:
             return []
+        if criteria.first_scrape:
+            logger.info("leboncoin: 1er scrape — backfill (jusqu'à %d pages/périmètre)",
+                        MAX_PAGES_FIRST)
 
         results: List[NormalizedListing] = []
         try:
@@ -258,8 +265,9 @@ class LeboncoinScraper(BaseScraper):
         listings: List[NormalizedListing] = []
         seen: set[str] = set()
         filters = self._build_filters(criteria, location)
+        max_pages = MAX_PAGES_FIRST if criteria.first_scrape else MAX_PAGES
 
-        for page in range(MAX_PAGES):
+        for page in range(max_pages):
             payload = {
                 "filters": filters,
                 "limit": RESULTS_PER_PAGE,

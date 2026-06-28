@@ -16,7 +16,10 @@ SUGGEST_URL = "https://res.bienici.com/suggest.json"
 ADS_URL = "https://www.bienici.com/realEstateAds.json"
 
 RESULTS_PER_PAGE = 100
-MAX_PAGES = 5  # personal-use cap: up to 500 ads / commune / run
+MAX_PAGES = 5  # refresh cap: up to 500 newest ads / commune / run
+# First scrape backfills the existing catalogue; Bien'ici is free, so go up to
+# its maxAuthorizedResults (2400). Filtered searches stop early at their total.
+MAX_PAGES_FIRST = 24
 
 # Melo-style int <-> Bien'ici string property types
 PROPERTY_TYPE_TO_BIENICI = {
@@ -147,8 +150,9 @@ class BienIciScraper(BaseScraper):
     ) -> List[NormalizedListing]:
         listings: List[NormalizedListing] = []
         filter_type = "rent" if criteria.transaction_type == 1 else "buy"
+        max_pages = MAX_PAGES_FIRST if criteria.first_scrape else MAX_PAGES
 
-        for page in range(1, MAX_PAGES + 1):
+        for page in range(1, max_pages + 1):
             filters = {
                 "size": RESULTS_PER_PAGE,
                 "from": (page - 1) * RESULTS_PER_PAGE,
