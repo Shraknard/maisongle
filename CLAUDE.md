@@ -97,6 +97,11 @@ complète et l'avancement. En résumé :
 
 - Refresh **à la demande** au chargement de la recherche, **throttlé à 5 min par périmètre**
   (signature des critères) — pas de scheduler. Cache servi en deçà du throttle.
+- **Backfill au 1er scrape, incrémental ensuite** : `SearchCriteria.first_scrape` (posé par
+  `services/scrape` quand aucun run n'existe pour le périmètre, hors signature) fait paginer en profondeur
+  la 1ʳᵉ fois (Leboncoin jusqu'à 100 pages = plafond LBC ~3500 ; Bien'ici jusqu'à 24 = 2400), puis seulement
+  les pages les plus récentes (5) aux refresh. La pagination s'arrête au total réel → une recherche filtrée
+  backfille entièrement à bas coût. Leboncoin plafonne à 3500/requête : couverture plus large = filtres plus fins.
 - Sources actives : **Bien'ici** (JSON, httpx) et **PAP** (HTML selectolax + curl_cffi pour passer
   Cloudflare). Les annonces PAP n'ont pas de coordonnées (pas de marqueur carte).
 - Source optionnelle : **Leboncoin** (API JSON `finder/search`, **validée en live**). Protégée par DataDome
