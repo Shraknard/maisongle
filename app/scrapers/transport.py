@@ -91,7 +91,7 @@ class ScrapflyTransport:
 
     def __init__(self, api_key: str, country: str = "fr",
                  proxy_pool: str = "public_residential_pool",
-                 render_js: bool = False, timeout: int = 90):
+                 render_js: bool = False):
         try:
             from scrapfly import ScrapflyClient, ScrapeConfig
         except ImportError as exc:  # pragma: no cover
@@ -103,7 +103,6 @@ class ScrapflyTransport:
         self.country = country
         self.proxy_pool = proxy_pool
         self.render_js = render_js
-        self.timeout = timeout
 
     async def post_json(self, url: str, body: dict, headers: dict) -> Optional[dict]:
         config = self._ScrapeConfig(
@@ -116,7 +115,7 @@ class ScrapflyTransport:
             proxy_pool=self.proxy_pool,
             render_js=self.render_js,       # JSON API: no browser rendering needed
             raise_on_upstream_error=False,  # a 403 is data, not an exception
-            timeout=self.timeout,
+            retry=False,                    # we handle retries ourselves
         )
         try:
             res = await self._client.async_scrape(config)

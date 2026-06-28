@@ -129,14 +129,27 @@ class LeboncoinScraper(BaseScraper):
             return []
 
         results: List[NormalizedListing] = []
+        consecutive_failures = 0
         try:
             for commune in criteria.communes:
                 try:
                     ads = await self._fetch_commune(transport, criteria, commune)
+                    if ads is None:
+                        # Transport-level failure (blocked / quota / network).
+                        consecutive_failures += 1
+                        if consecutive_failures >= 2:
+                            logger.warning("leboncoin: 2 échecs consécutifs — stop")
+                            break
+                        continue
+                    consecutive_failures = 0
                     logger.info("leboncoin: %s -> %d annonces", commune.name, len(ads))
                     results.extend(ads)
                 except Exception as exc:  # noqa: BLE001 — isolate each commune
                     logger.error("leboncoin: erreur pour %s: %s", commune.insee, exc)
+                    consecutive_failures += 1
+                    if consecutive_failures >= 2:
+                        logger.warning("leboncoin: 2 échecs consécutifs — stop")
+                        break
         finally:
             await transport.aclose()
         return results
@@ -193,7 +206,9 @@ class LeboncoinScraper(BaseScraper):
 
     async def _fetch_commune(
         self, transport: JsonTransport, criteria: SearchCriteria, commune: Commune,
-    ) -> List[NormalizedListing]:
+    ) -> Optional[List[NormalizedListing]]:
+        """Fetch ads for one commune. Returns None on transport failure (vs [] for
+        a commune with no ads) so the caller can distinguish and stop early."""
         listings: List[NormalizedListing] = []
         seen: set[str] = set()
         filters = self._build_filters(criteria, commune)
@@ -209,6 +224,8 @@ class LeboncoinScraper(BaseScraper):
             }
             data = await transport.post_json(SEARCH_URL, payload, self.BASE_HEADERS)
             if not data:  # blocked, error or empty — transport already logged
+                if page == 0:
+                    return None  # first page failed → signal transport failure
                 break
 
             ads = data.get("ads") or []
