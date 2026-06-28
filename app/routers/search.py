@@ -1,13 +1,20 @@
 import logging
+import math
 from fastapi import APIRouter, Query, Depends
 from typing import Optional, List, Dict
-from sqlalchemy import nullslast
+from sqlalchemy import func, nullslast
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import DVFCommune, LoyerCommune, Listing
 from app.scrapers.base import SearchCriteria
-from app.services.geo import search_communes, get_commune, reverse_commune, normalize_insee_code
+from app.services.geo import (
+    search_communes,
+    get_commune,
+    reverse_commune,
+    communes_within_radius,
+    normalize_insee_code,
+)
 from app.services.scrape import refresh_if_stale
 from app.services.listing_view import serialize_listing, price_drops
 
@@ -15,11 +22,40 @@ logger = logging.getLogger("routers.search")
 router = APIRouter()
 
 PAGE_SIZE = 50
+EARTH_RADIUS_KM = 6371.0
 _SORT_COLUMNS = {
     "price": Listing.price,
     "surface": Listing.surface,
     "date": Listing.first_seen,
 }
+
+
+def _within_radius(query, lat: float, lon: float, radius_km: float):
+    """Restrict a Listing query to those within ``radius_km`` of a point.
+
+    A cheap lat/lon bounding box prefilters rows, then an exact great-circle
+    (haversine) distance computed in SQL trims to the precise circle. Listings
+    without coordinates (e.g. PAP) are excluded — radius search is Bien'ici-only.
+    """
+    dlat = radius_km / 111.0
+    cos_lat = math.cos(math.radians(lat)) or 1e-9
+    dlon = radius_km / (111.0 * cos_lat)
+    query = query.filter(
+        Listing.latitude.isnot(None),
+        Listing.longitude.isnot(None),
+        Listing.latitude.between(lat - dlat, lat + dlat),
+        Listing.longitude.between(lon - dlon, lon + dlon),
+    )
+    sin_dlat = func.sin(func.radians(Listing.latitude - lat) / 2)
+    sin_dlon = func.sin(func.radians(Listing.longitude - lon) / 2)
+    a = (
+        sin_dlat * sin_dlat
+        + func.cos(func.radians(lat))
+        * func.cos(func.radians(Listing.latitude))
+        * sin_dlon * sin_dlon
+    )
+    distance = 2 * EARTH_RADIUS_KM * func.asin(func.sqrt(a))
+    return query.filter(distance <= radius_km)
 
 
 @router.get("/locations")
@@ -56,6 +92,7 @@ async def search_listings(
     radius search sends ``lat``/``lon``; we reverse-geocode it to a commune.
     """
     # 1. Resolve target communes
+    is_radius = radius is not None and lat is not None and lon is not None
     communes = []
     if city_id:
         for cid in city_id:
@@ -63,6 +100,8 @@ async def search_listings(
             commune = await get_commune(insee)
             if commune:
                 communes.append(commune)
+    elif is_radius:
+        communes = await communes_within_radius(lat, lon, float(radius))
     elif lat is not None and lon is not None:
         commune = await reverse_commune(lat, lon)
         if commune:
@@ -80,26 +119,34 @@ async def search_listings(
         room_max=room_max,
         bedroom_min=bedroom_min,
         bedroom_max=bedroom_max,
+        center_lat=lat if is_radius else None,
+        center_lon=lon if is_radius else None,
+        radius_km=float(radius) if is_radius else None,
     )
 
-    # 2. Throttled on-demand scrape (only when we know which communes to scrape)
+    # 2. Throttled on-demand scrape (only when we know which communes to scrape).
+    #    Radius search has no coordinates on PAP listings, so it scrapes Bien'ici only.
     refresh_info = {"scraped": False}
     if communes:
         try:
-            refresh_info = await refresh_if_stale(db, criteria)
+            sources = ["bienici"] if is_radius else None
+            refresh_info = await refresh_if_stale(db, criteria, sources=sources)
         except Exception:  # noqa: BLE001 — never let a scrape failure break search
             logger.exception("refresh a échoué, on sert le cache")
+            db.rollback()  # clear any half-applied transaction before the read
 
     # 3. Query the local DB
     insee_list = [normalize_insee_code(c.insee) for c in communes]
-    if not insee_list and not department:
+    if not is_radius and not insee_list and not department:
         return {"total": 0, "page": page, "properties": [], "refresh": refresh_info}
 
     query = db.query(Listing).filter(
         Listing.active.is_(True),
         Listing.transaction_type == transaction_type,
     )
-    if insee_list:
+    if is_radius:
+        query = _within_radius(query, lat, lon, float(radius))
+    elif insee_list:
         query = query.filter(Listing.city_insee.in_(insee_list))
     elif department:
         query = query.filter(Listing.department_code == department)

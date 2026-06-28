@@ -52,7 +52,17 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
 - [x] Scraper **PAP** (HTML via selectolax + `curl_cffi` pour franchir Cloudflare) — résolution commune→geo id via `ac-geo`,
   pagination en suivant le lien « Suivante » (stop avant `/proximite`), URL par type (vente : pluriel ; location : singulier).
   Limites : pas de coordonnées (absent de la carte) ; INSEE = commune recherchée ; loc. limitée aux types appartement/maison/local-commercial.
-- [ ] Recherche par rayon (lat/lon/radius) pour Bien'ici
+- [x] **Recherche par rayon (lat/lon/radius)** — Bien'ici uniquement (besoin de coordonnées).
+  L'API `realEstateAds.json` ne filtre que par `zoneIds` (pas de bbox/polygon/rayon), donc :
+  - `communes_within_radius()` (`services/geo.py`) énumère les communes du rayon. geo.api.gouv n'expose pas la
+    géométrie des départements → table statique des centroïdes (`_DEPT_CENTROIDS`) pour préfiltrer les départements
+    candidats, puis filtrage précis des communes par distance (haversine). La commune hôte est toujours incluse
+    (cas des grandes communes dont le centre tombe hors rayon). Plafond de **60 communes** (plus proches) par run.
+  - Bien'ici combine désormais tous les `zoneIds` des communes en **une seule requête paginée** (dédup des zones,
+    cache `INSEE→zoneIds`, résolution concurrente). Plafond inchangé de 500 annonces/run.
+  - Côté lecture, `routers/search.py` filtre par distance haversine SQL (préfiltre bbox + cercle exact), pas par INSEE.
+  - PAP est exclu du rayon (pas de coordonnées). Au passage : correctif `_int()` pour les `roomsQuantity`/`floor`
+    renvoyés en plage (`[2, 4]`, programmes neufs) qui cassaient l'insert sur colonne entière.
 - [ ] *Plus tard* : Leboncoin / SeLoger (DataDome via curl_cffi / Camoufox)
 
 ### 4. Finitions

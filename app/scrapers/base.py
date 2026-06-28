@@ -35,6 +35,20 @@ class SearchCriteria:
     room_max: Optional[int] = None
     bedroom_min: Optional[int] = None
     bedroom_max: Optional[int] = None
+    # Radius search (Bien'ici only — needs coordinates). When set, ``communes`` is
+    # the set of communes whose centre falls within the circle; results are then
+    # trimmed to the exact circle on the DB read side.
+    center_lat: Optional[float] = None
+    center_lon: Optional[float] = None
+    radius_km: Optional[float] = None
+
+    @property
+    def is_radius(self) -> bool:
+        return (
+            self.center_lat is not None
+            and self.center_lon is not None
+            and self.radius_km is not None
+        )
 
     def signature(self) -> str:
         payload = {
@@ -49,6 +63,11 @@ class SearchCriteria:
             "room_max": self.room_max,
             "bedroom_min": self.bedroom_min,
             "bedroom_max": self.bedroom_max,
+            # Round the centre (~100 m) so micro-jitter doesn't bust the throttle.
+            "center": (
+                [round(self.center_lat, 3), round(self.center_lon, 3), self.radius_km]
+                if self.is_radius else None
+            ),
         }
         raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha1(raw.encode()).hexdigest()

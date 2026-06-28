@@ -84,10 +84,13 @@ complète et l'avancement. En résumé :
   (signature des critères) — pas de scheduler. Cache servi en deçà du throttle.
 - Sources actives : **Bien'ici** (JSON, httpx) et **PAP** (HTML selectolax + curl_cffi pour passer
   Cloudflare). Les annonces PAP n'ont pas de coordonnées (pas de marqueur carte).
+- **Recherche par rayon** (lat/lon/radius) : Bien'ici uniquement (PAP n'a pas de coordonnées).
+  `services/geo.communes_within_radius()` énumère les communes du rayon (préfiltre par centroïdes de
+  départements, filtrage haversine, plafond 60 communes) ; Bien'ici combine leurs `zoneIds` en une requête ;
+  `routers/search.py` filtre les résultats par distance haversine SQL.
 - Enrichissement (zonage ABC + géorisques) déclenché **uniquement à la mise en favori**.
 
 ## A faire
 
-- Recherche par rayon (lat/lon/radius) pour Bien'ici.
 - Sources protégées par DataDome (Leboncoin, SeLoger) — repoussées (curl_cffi / Camoufox).
   À exécuter depuis une IP résidentielle.

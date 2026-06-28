@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import List, Optional
@@ -43,6 +44,17 @@ def _num(value):
     return value
 
 
+def _int(value) -> Optional[int]:
+    """Like ``_num`` but for integer columns (rooms/bedrooms/floor).
+
+    New-build programmes report ranges as lists (e.g. ``roomsQuantity == [2, 4]``),
+    which would otherwise be sent straight into an integer column. Collapse to the
+    lowest value and coerce to ``int``.
+    """
+    value = _num(value)
+    return int(value) if isinstance(value, (int, float)) else None
+
+
 class BienIciScraper(BaseScraper):
     """Scraper for bienici.com — open JSON endpoints, no anti-bot.
 
@@ -50,6 +62,7 @@ class BienIciScraper(BaseScraper):
     then page through ``realEstateAds.json`` filtered by those zones.
     """
     source = "bienici"
+    _CONCURRENCY = 8  # parallel suggest lookups when resolving many communes
 
     def __init__(self, timeout: float = 30.0):
         self.timeout = timeout
@@ -58,24 +71,46 @@ class BienIciScraper(BaseScraper):
             "Referer": "https://www.bienici.com/",
             "Accept": "application/json",
         }
+        # INSEE -> zoneIds, cached for the process (communes/zones are static).
+        self._zone_cache: dict[str, List[str]] = {}
 
     async def search(self, criteria: SearchCriteria) -> List[NormalizedListing]:
-        results: List[NormalizedListing] = []
+        if not criteria.communes:
+            return []
         async with httpx.AsyncClient(timeout=self.timeout, headers=self.headers) as client:
-            for commune in criteria.communes:
-                try:
-                    zone_ids = await self._zone_ids(client, commune)
-                    if not zone_ids:
-                        logger.warning("bienici: aucune zone pour %s (%s)", commune.name, commune.insee)
-                        continue
-                    ads = await self._fetch_ads(client, criteria, zone_ids)
-                    logger.info("bienici: %s -> %d annonces", commune.name, len(ads))
-                    results.extend(ads)
-                except httpx.HTTPError as exc:
-                    logger.error("bienici: erreur réseau pour %s: %s", commune.insee, exc)
-        return results
+            # Resolve every commune to its zoneIds, then run a single combined
+            # query: Bien'ici filters only by zoneIds, so this dedups overlapping
+            # zones and keeps radius searches (many communes) to one paged fetch.
+            sem = asyncio.Semaphore(self._CONCURRENCY)
+
+            async def resolve(commune: Commune) -> List[str]:
+                async with sem:
+                    try:
+                        return await self._zone_ids(client, commune)
+                    except httpx.HTTPError as exc:
+                        logger.error("bienici: zones %s: %s", commune.insee, exc)
+                        return []
+
+            groups = await asyncio.gather(*(resolve(c) for c in criteria.communes))
+            zone_ids = list(dict.fromkeys(z for group in groups for z in group))
+            if not zone_ids:
+                logger.warning("bienici: aucune zone pour %d commune(s)", len(criteria.communes))
+                return []
+
+            try:
+                ads = await self._fetch_ads(client, criteria, zone_ids)
+            except httpx.HTTPError as exc:
+                logger.error("bienici: erreur réseau (%d zones): %s", len(zone_ids), exc)
+                return []
+            logger.info(
+                "bienici: %d commune(s), %d zone(s) -> %d annonces",
+                len(criteria.communes), len(zone_ids), len(ads),
+            )
+            return ads
 
     async def _zone_ids(self, client: httpx.AsyncClient, commune: Commune) -> List[str]:
+        if commune.insee in self._zone_cache:
+            return self._zone_cache[commune.insee]
         resp = await client.get(SUGGEST_URL, params={"q": commune.name})
         resp.raise_for_status()
         suggestions = resp.json()
@@ -97,6 +132,7 @@ class BienIciScraper(BaseScraper):
                 if sug.get("type") == "city":
                     zones.extend(sug.get("zoneIds") or [])
                     break
+        self._zone_cache[commune.insee] = zones
         return zones
 
     def _bienici_types(self, criteria: SearchCriteria) -> List[str]:
@@ -179,9 +215,9 @@ class BienIciScraper(BaseScraper):
             price_per_meter=_num(ad.get("pricePerSquareMeter")),
             surface=_num(ad.get("surfaceArea")),
             land_surface=_num(ad.get("landSurfaceArea")),
-            room=ad.get("roomsQuantity"),
-            bedroom=ad.get("bedroomsQuantity"),
-            floor=ad.get("floor"),
+            room=_int(ad.get("roomsQuantity")),
+            bedroom=_int(ad.get("bedroomsQuantity")),
+            floor=_int(ad.get("floor")),
             property_type=BIENICI_TO_PROPERTY_TYPE.get(ad.get("propertyType")),
             transaction_type=1 if ad.get("adType") == "rent" else 0,
             city_name=ad.get("city"),
