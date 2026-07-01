@@ -830,7 +830,8 @@
             const advertUrl = prop.adverts?.[0]?.url || '';
             const siteName = getSiteName(advertUrl);
             const priceIndicator = getPriceIndicator(prop.price, prop.surface, prop.city?.insee, dvfData);
-            
+            const pricePerM2 = prop.pricePerMeter || (prop.price && prop.surface ? prop.price / prop.surface : null);
+
             return `
                 <div class="property-card bg-white border rounded-xl overflow-hidden transition-all duration-200">
                 <a href="/property/${uuid}" class="block">
@@ -854,11 +855,12 @@
                     </div>
                     <div class="p-4">
                         <h3 class="font-semibold text-gray-900 line-clamp-1 mb-2">${prop.title || 'Sans titre'}</h3>
-                        <div class="flex items-center gap-2 mb-2">
+                        <div class="flex items-center gap-2 mb-1">
                             <p class="text-blue-600 font-bold text-lg">${formatPrice(prop.price, prop.transactionType)}</p>
                             ${priceIndicator ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded ${priceIndicator.bg} ${priceIndicator.color} text-xs font-medium" title="vs moyenne commune"><i data-lucide="${priceIndicator.icon}" class="w-3 h-3"></i>${priceIndicator.label}</span>` : ''}
                             ${prop.priceDrop ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded bg-orange-100 text-orange-600 text-xs font-medium" title="Baisse depuis la première vue"><i data-lucide="trending-down" class="w-3 h-3"></i>-${new Intl.NumberFormat('fr-FR').format(prop.priceDrop.amount)} €</span>` : ''}
                         </div>
+                        ${pricePerM2 ? `<p class="text-xs text-gray-500 mb-2">${new Intl.NumberFormat('fr-FR').format(Math.round(pricePerM2))} €/m²${prop.transactionType === 1 ? '/mois' : ''}</p>` : '<div class="mb-2"></div>'}
                         <div class="flex items-center text-sm text-gray-500 mb-3">
                             <i data-lucide="map-pin" class="w-4 h-4 mr-1"></i>
                             <span>${city} ${zipcode}</span>
