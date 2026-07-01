@@ -6,12 +6,14 @@ from app.scrapers.base import BaseScraper
 from app.scrapers.bienici import BienIciScraper
 from app.scrapers.leboncoin import LeboncoinScraper
 from app.scrapers.pap import PapScraper
+from app.scrapers.seloger import SelogerScraper
 
 # Adding a new source = import its scraper and add an instance here.
 _INSTANCES: List[BaseScraper] = [
     BienIciScraper(),
     PapScraper(),
-    LeboncoinScraper(),  # no-op unless leboncoin_datadome is configured
+    LeboncoinScraper(),  # no-op unless leboncoin is enabled + a transport is set
+    SelogerScraper(),    # no-op unless seloger is enabled + a transport is set
 ]
 
 SCRAPERS: Dict[str, BaseScraper] = {s.source: s for s in _INSTANCES}

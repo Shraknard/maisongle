@@ -68,7 +68,8 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
   par rayon. Mapping catégorie (vente 9 / location 10), `real_estate_type` et `attributes`
   (square/rooms/bedrooms/energy_rate/ges).
 - [x] **Transport anti-bot pluggable** (`scrapers/transport.py`) pour franchir DataDome, source no-op tant
-  qu'aucun transport n'est configuré (ne casse jamais une recherche) :
+  qu'aucun transport n'est configuré (ne casse jamais une recherche). Deux protocoles : `post_json`
+  (POST + réponse JSON, Leboncoin) et `get_text` (GET + corps brut HTML, SeLoger). Deux implémentations :
   - `scrapfly` (**recommandé**) — Scrapfly Web Unlocker : requête `finder/search` routée via leur API
     (`asp=true`, `proxy_pool=public_residential_pool`, `country=fr`, `render_js=false`). IP résidentielle
     fournie par Scrapfly → **IP maison jamais exposée**, DataDome franchi côté Scrapfly, **zéro cookie/proxy
@@ -83,7 +84,18 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
       chaque retry sur IP résidentielle fraîche. `render_js` interdit en POST → reste `False`.
     - Constat initial : en pur HTTP depuis une IP datacenter, DataDome renvoie 403 `x-datadome: protected`
       + `captcha-delivery.com` et flague l'IP en quelques requêtes → d'où le routage Scrapfly.
-- [ ] *Plus tard* : SeLoger (DataDome, HTML) — réutilisera le transport Scrapfly.
+- [x] Scraper **SeLoger** (`scrapers/seloger.py`, HTML DataDome) — **scaffolding, validation live à faire**.
+  Réutilise le transport (nouveau `get_text` GET/HTML). Une requête `list.htm` par commune
+  (`places=[{"inseeCodes":[…]}]`, filtre INSEE — pas de slug), pagination `LISTING-LISTpg`. Les résultats
+  sont un blob JSON embarqué (`window["initialData"] = JSON.parse("…")`) : on l'extrait, on décode le
+  littéral JS (double `json.loads`, accents préservés), on lit `datasets[i].cards.list` en gardant
+  `cardType == "classified"`. Comme PAP : **pas de coordonnées** sur les cartes de recherche (elles ne sont
+  que sur les pages détail via `__NEXT_DATA__`) → pas de marqueur carte, INSEE = commune cherchée ; **exclu
+  du rayon** (les runs rayon passent `sources=["bienici","leboncoin"]`). No-op tant que `SELOGER_ENABLED`
+  est faux ou qu'aucun transport n'est configuré. Testé sur mocks (extraction/normalisation/URL/no-op).
+  - **Contrat provisoire** (noms de champs `estateType`/`epc`, codes `types`, métadonnées pagination,
+    champ `photos`) reconstitué depuis des références publiques — à ajuster à la 1ʳᵉ validation live
+    (`SELOGER_ENABLED=true`, `SCRAPFLY_API_KEY=…` ; passer `SELOGER_RENDER_JS=true` si retours vides/bloqués).
 - [ ] *Suivi Leboncoin* : surveiller coût/crédits Scrapfly (résidentiel + ASP + retries) et taux de
   blocage furtif ; ajuster `COMMUNE_RADIUS_M` / `FIRST_PAGE_ATTEMPTS` si besoin.
 

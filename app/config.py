@@ -6,6 +6,13 @@ from functools import lru_cache
 # Get the project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
 
+# Default browser User-Agent for the cookie fallback transport (shared by the
+# DataDome-protected sources).
+_DEFAULT_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+
 
 class Settings(BaseSettings):
     # Database
@@ -25,10 +32,20 @@ class Settings(BaseSettings):
     leboncoin_transport: str = "scrapfly"  # "scrapfly" | "cookie"
     # cookie transport
     leboncoin_datadome: str = ""
-    leboncoin_user_agent: str = (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    )
+    leboncoin_user_agent: str = _DEFAULT_USER_AGENT
+
+    # SeLoger (DataDome-protected HTML). Disabled until a transport is configured;
+    # same transports as Leboncoin (scrapfly recommended / cookie fallback). Unlike
+    # Leboncoin, SeLoger search cards carry NO coordinates, so — like PAP — listings
+    # have no map marker and are tagged with the searched commune's INSEE. The
+    # embedded-data contract is provisional (not yet validated live).
+    seloger_enabled: bool = False
+    seloger_transport: str = "scrapfly"  # "scrapfly" | "cookie"
+    seloger_datadome: str = ""
+    seloger_user_agent: str = _DEFAULT_USER_AGENT
+    # render_js doubles Scrapfly credits; ASP alone usually clears DataDome for the
+    # server-rendered HTML. Flip to true only if results come back empty/blocked.
+    seloger_render_js: bool = False
 
     # Scrapfly Web Unlocker (shared by any DataDome source). Get a key at
     # scrapfly.io; residential pool + asp clears DataDome for ~cents at this

@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from app.config import get_settings
 from app.scrapers.base import BaseScraper, SearchCriteria, NormalizedListing, Commune
 from app.scrapers.transport import (
-    JsonTransport, DirectCookieTransport, ScrapflyTransport,
+    Transport, DirectCookieTransport, ScrapflyTransport,
 )
 
 logger = logging.getLogger("scrapers.leboncoin")
@@ -114,7 +114,7 @@ class LeboncoinScraper(BaseScraper):
     # surfaced into scrape_runs.detail by the scrape service.
     last_cost: Optional[int] = None
 
-    def _transport(self) -> Optional[JsonTransport]:
+    def _transport(self) -> Optional[Transport]:
         """Build the configured transport, or None if the source is disabled."""
         s = get_settings()
         if not s.leboncoin_enabled:
@@ -167,7 +167,7 @@ class LeboncoinScraper(BaseScraper):
         return results
 
     async def _search_communes(
-        self, transport: JsonTransport, criteria: SearchCriteria
+        self, transport: Transport, criteria: SearchCriteria
     ) -> List[NormalizedListing]:
         results: List[NormalizedListing] = []
         consecutive_failures = 0
@@ -256,7 +256,7 @@ class LeboncoinScraper(BaseScraper):
         }
 
     async def _fetch(
-        self, transport: JsonTransport, criteria: SearchCriteria,
+        self, transport: Transport, criteria: SearchCriteria,
         location: dict, insee: Optional[str],
     ) -> Optional[List[NormalizedListing]]:
         """Fetch ads for one location (commune or radius), tagging each with

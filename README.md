@@ -108,6 +108,12 @@ supprimé). Architecture :
     annonces PAP n'ont pas de coordonnées (absentes des cartes de résultats) : elles sont rattachées
     à l'INSEE de la commune recherchée pour le filtrage, mais n'apparaissent pas sur la carte.
 
+  Sources optionnelles (derrière DataDome, désactivées par défaut, franchies via un **transport
+  pluggable** — Scrapfly Web Unlocker recommandé) :
+  - **Leboncoin** (API JSON `finder/search`, validée en live) — annonces géolocalisées (carte + rayon).
+  - **SeLoger** (HTML `list.htm`, blob JSON embarqué) — *scaffolding, validation live à faire* ; comme
+    PAP, pas de coordonnées sur les cartes de recherche.
+
   Ajouter une source = déposer un module et l'enregistrer dans `app/scrapers/registry.py`.
 
 > À exécuter depuis une **IP résidentielle** : les plateformes protégées (Leboncoin, SeLoger via

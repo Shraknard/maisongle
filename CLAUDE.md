@@ -29,7 +29,8 @@ app/
     bienici.py         # Bien'ici (JSON ouvert, httpx)
     pap.py             # PAP / Particulier à Particulier (HTML selectolax, curl_cffi/Cloudflare)
     leboncoin.py       # Leboncoin (API JSON finder/search ; DataDome via transport)
-    transport.py       # Transports anti-bot pluggables (Scrapfly Web Unlocker / cookie injecté)
+    seloger.py         # SeLoger (HTML selectolax-free ; blob JSON embarqué ; DataDome via transport)
+    transport.py       # Transports anti-bot pluggables (post_json/get_text ; Scrapfly / cookie injecté)
     registry.py        # Enregistrement des scrapers actifs
   services/            # Logique métier
     scrape.py          # Refresh throttlé (5 min/périmètre), upsert + historique de prix
@@ -80,6 +81,14 @@ SCRAPFLY_API_KEY=
 # depuis sa propre session navigateur (lié à l'IP résidentielle de l'app).
 # LEBONCOIN_DATADOME=
 # LEBONCOIN_USER_AGENT=
+
+# SeLoger (optionnel, derrière DataDome, HTML) — désactivé par défaut. Même transport
+# partagé (SCRAPFLY_API_KEY ci-dessus). Scaffolding : contrat des données à valider en live.
+SELOGER_ENABLED=false
+SELOGER_TRANSPORT=scrapfly             # "scrapfly" | "cookie"
+# SELOGER_RENDER_JS=false              # true seulement si retours vides (DataDome non franchi)
+# SELOGER_DATADOME=                    # transport "cookie" (fallback manuel)
+# SELOGER_USER_AGENT=
 ```
 
 ## Conventions
@@ -116,7 +125,16 @@ complète et l'avancement. En résumé :
   - DataDome fait du **blocage furtif** (HTTP 200 + résultats vides) → retry de la 1ʳᵉ page
     (`FIRST_PAGE_ATTEMPTS`), chaque retry passant par une IP résidentielle fraîche.
   - `render_js` reste `False` (Scrapfly refuse le rendu JS en POST ; endpoint JSON de toute façon).
-- **Recherche par rayon** (lat/lon/radius) : **Bien'ici + Leboncoin** (sources avec coordonnées ; PAP exclu).
+- Source optionnelle : **SeLoger** (HTML `list.htm`, DataDome). **Scaffolding — validation live à faire.**
+  Même transport que Leboncoin, via le protocole `get_text` (GET/HTML). Une requête par commune
+  (`places=[{"inseeCodes":[…]}]`, filtre INSEE — pas de slug), pagination `LISTING-LISTpg`. Les résultats
+  sont un blob JSON embarqué (`window["initialData"] = JSON.parse("…")`) : extraction + double `json.loads`
+  (accents préservés), lecture de `datasets[i].cards.list` en gardant `cardType == "classified"`. **Comme
+  PAP : pas de coordonnées** sur les cartes de recherche → pas de marqueur carte, INSEE = commune cherchée,
+  **exclu du rayon**. Contrat des champs **provisoire** (à confirmer live). No-op tant que `SELOGER_ENABLED`
+  est faux / aucun transport configuré. `SELOGER_RENDER_JS` (défaut `false`) à passer `true` si retours vides.
+- **Recherche par rayon** (lat/lon/radius) : **Bien'ici + Leboncoin** (sources avec coordonnées ; PAP et
+  SeLoger exclus — les runs rayon passent `sources=["bienici","leboncoin"]`).
   `services/geo.communes_within_radius()` énumère les communes du rayon (préfiltre par centroïdes de
   départements, filtrage haversine, plafond 60 communes) ; Bien'ici combine leurs `zoneIds` en une requête ;
   `routers/search.py` filtre les résultats par distance haversine SQL.
@@ -127,4 +145,8 @@ complète et l'avancement. En résumé :
 - **Leboncoin** : scraper + transport Scrapfly prêts et testés (mocks). **Validation live à faire** avec
   une vraie clé Scrapfly : `LEBONCOIN_ENABLED=true`, `SCRAPFLY_API_KEY=...`. Surveiller le coût/crédits
   (pool résidentiel + ASP) et le taux de succès DataDome.
-- **SeLoger** : repoussé (DataDome, HTML) — réutilisera le transport Scrapfly.
+- **SeLoger** : scraper + `get_text` transport prêts et testés (mocks). **Validation live à faire** avec une
+  vraie clé Scrapfly : `SELOGER_ENABLED=true`, `SCRAPFLY_API_KEY=...`. Le contrat des données embarquées
+  (`window["initialData"]`) est reconstitué depuis des références publiques → **vérifier/ajuster les mappings**
+  (`estateType`/`types`, `epc`, `photos`, pagination) à la 1ʳᵉ exécution réelle ; passer `SELOGER_RENDER_JS=true`
+  si les résultats reviennent vides (DataDome non franchi par l'ASP seul).

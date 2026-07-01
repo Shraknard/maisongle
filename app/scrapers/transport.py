@@ -22,9 +22,19 @@ from typing import Optional, Protocol
 logger = logging.getLogger("scrapers.transport")
 
 
-class JsonTransport(Protocol):
-    """POST a JSON body and return the parsed JSON response, or None on failure."""
+class Transport(Protocol):
+    """Fetch through an anti-bot front, transport-agnostically.
+
+    ``post_json`` POSTs a JSON body and parses the JSON reply (Leboncoin's API);
+    ``get_text`` GETs a URL and returns the raw response body (SeLoger's HTML).
+    Both return None on failure so a scraper can tell a block from empty results.
+    """
     async def post_json(self, url: str, body: dict, headers: dict) -> Optional[dict]:
+        ...
+
+    async def get_text(
+        self, url: str, headers: dict, render_js: Optional[bool] = None
+    ) -> Optional[str]:
         ...
 
     async def aclose(self) -> None:
@@ -77,6 +87,27 @@ class DirectCookieTransport:
             return None
         return data
 
+    async def get_text(
+        self, url: str, headers: dict, render_js: Optional[bool] = None
+    ) -> Optional[str]:
+        # render_js is ignored: curl_cffi cannot execute JS. SeLoger's HTML is
+        # server-rendered, so the initialData blob is present without rendering.
+        from curl_cffi.requests import AsyncSession  # lazy: heavy import
+
+        merged = {
+            **headers,
+            "User-Agent": self.user_agent,
+            "Cookie": f"datadome={self.datadome}",
+        }
+        async with AsyncSession() as session:
+            resp = await session.get(
+                url, headers=merged, impersonate=self.impersonate, timeout=self.timeout,
+            )
+        if resp.status_code != 200:
+            logger.warning("transport(cookie): HTTP %s sur %s", resp.status_code, url)
+            return None
+        return resp.text
+
     async def aclose(self) -> None:
         return None
 
@@ -105,19 +136,25 @@ class ScrapflyTransport:
         self.render_js = render_js
         self.total_cost = 0  # Scrapfly credits billed over this transport's life
 
-    async def post_json(self, url: str, body: dict, headers: dict) -> Optional[dict]:
-        config = self._ScrapeConfig(
+    def _config(self, url: str, method: str, *, body: Optional[str] = None,
+                headers: Optional[dict] = None, render_js: Optional[bool] = None):
+        extra = {"body": body} if body is not None else {}
+        return self._ScrapeConfig(
             url=url,
-            method="POST",
-            body=json.dumps(body, separators=(",", ":")),
-            headers={**headers, "Content-Type": "application/json"},
+            method=method,
+            headers=headers or {},
             asp=True,                       # bypass DataDome / anti-bot
-            country=self.country,           # residential FR exit (Leboncoin is FR-only)
+            country=self.country,           # residential FR exit (FR-only sites)
             proxy_pool=self.proxy_pool,
-            render_js=self.render_js,       # JSON API: no browser rendering needed
+            # render_js doubles the credit cost; callers opt in per request.
+            render_js=self.render_js if render_js is None else render_js,
             raise_on_upstream_error=False,  # a 403 is data, not an exception
             retry=False,                    # we handle retries ourselves
+            **extra,
         )
+
+    async def _scrape(self, config, url: str):
+        """Run a scrape, bill its credits, and return the raw content (or None)."""
         try:
             res = await self._client.async_scrape(config)
         except Exception as exc:  # noqa: BLE001 — Scrapfly raises on quota/credit/network
@@ -138,14 +175,34 @@ class ScrapflyTransport:
         if not content:
             logger.warning("transport(scrapfly): réponse vide sur %s", url)
             return None
-        if isinstance(content, (dict, list)):
-            return content if isinstance(content, dict) else None
+        return content
+
+    async def post_json(self, url: str, body: dict, headers: dict) -> Optional[dict]:
+        config = self._config(
+            url, "POST",
+            body=json.dumps(body, separators=(",", ":")),
+            headers={**headers, "Content-Type": "application/json"},
+        )
+        content = await self._scrape(config, url)
+        if content is None:
+            return None
+        if isinstance(content, dict):
+            return content
+        if isinstance(content, list):
+            return None
         try:
             data = json.loads(content)
         except (ValueError, TypeError):
             logger.warning("transport(scrapfly): contenu non-JSON sur %s", url)
             return None
         return data if isinstance(data, dict) else None
+
+    async def get_text(
+        self, url: str, headers: dict, render_js: Optional[bool] = None
+    ) -> Optional[str]:
+        config = self._config(url, "GET", headers=headers, render_js=render_js)
+        content = await self._scrape(config, url)
+        return content if isinstance(content, str) else None
 
     async def aclose(self) -> None:
         if self.total_cost:
