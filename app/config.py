@@ -34,11 +34,12 @@ class Settings(BaseSettings):
     leboncoin_datadome: str = ""
     leboncoin_user_agent: str = _DEFAULT_USER_AGENT
 
-    # SeLoger (DataDome-protected HTML). Disabled until a transport is configured;
-    # same transports as Leboncoin (scrapfly recommended / cookie fallback). Unlike
-    # Leboncoin, SeLoger search cards carry NO coordinates, so — like PAP — listings
-    # have no map marker and are tagged with the searched commune's INSEE. The
-    # embedded-data contract is provisional (not yet validated live).
+    # SeLoger (DataDome-protected HTML, validated live). Disabled until a transport
+    # is configured; same transports as Leboncoin (scrapfly recommended / cookie
+    # fallback). Unlike Leboncoin, SeLoger search cards carry NO coordinates, so —
+    # like PAP — listings have no map marker and are tagged with the searched
+    # commune's INSEE. Its SERP is an SPA with no HTML pagination, so SeLoger yields
+    # the 30 newest listings per (commune, type).
     seloger_enabled: bool = False
     seloger_transport: str = "scrapfly"  # "scrapfly" | "cookie"
     seloger_datadome: str = ""

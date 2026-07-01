@@ -125,14 +125,17 @@ complète et l'avancement. En résumé :
   - DataDome fait du **blocage furtif** (HTTP 200 + résultats vides) → retry de la 1ʳᵉ page
     (`FIRST_PAGE_ATTEMPTS`), chaque retry passant par une IP résidentielle fraîche.
   - `render_js` reste `False` (Scrapfly refuse le rendu JS en POST ; endpoint JSON de toute façon).
-- Source optionnelle : **SeLoger** (HTML `list.htm`, DataDome). **Scaffolding — validation live à faire.**
-  Même transport que Leboncoin, via le protocole `get_text` (GET/HTML). Une requête par commune
-  (`places=[{"inseeCodes":[…]}]`, filtre INSEE — pas de slug), pagination `LISTING-LISTpg`. Les résultats
-  sont un blob JSON embarqué (`window["initialData"] = JSON.parse("…")`) : extraction + double `json.loads`
-  (accents préservés), lecture de `datasets[i].cards.list` en gardant `cardType == "classified"`. **Comme
-  PAP : pas de coordonnées** sur les cartes de recherche → pas de marqueur carte, INSEE = commune cherchée,
-  **exclu du rayon**. Contrat des champs **provisoire** (à confirmer live). No-op tant que `SELOGER_ENABLED`
-  est faux / aucun transport configuré. `SELOGER_RENDER_JS` (défaut `false`) à passer `true` si retours vides.
+- Source optionnelle : **SeLoger** (HTML, DataDome, **validée en live**). Même transport que Leboncoin, via
+  le protocole `get_text` (GET/HTML). `list.htm` est mort (HTTP 500) → recherche par URLs *slug*
+  `/immobilier/{achat|location}/immo-{ville}-{dept}/bien-{type}/`, une requête par (commune, type) ;
+  `_slugify()` construit le slug depuis le nom de commune, `bien-{type}` filtre le type (défaut appartement +
+  maison). Budget/surface/pièces filtrés côté lecture (DB), pas dans l'URL. Données embarquées :
+  `window["__UFRN_FETCHER__"] = JSON.parse("…")` → `pageProps.classifieds` (IDs) résolus via
+  `pageProps.classifiedsData` (extraction sous-chaîne + double `json.loads`, accents préservés). **Comme
+  PAP : pas de coordonnées** → pas de marqueur carte, INSEE = commune cherchée, **exclu du rayon**.
+  **Pagination impossible** (SERP en SPA : le serveur ne rend que la 1ʳᵉ page, aucun param d'URL ne pagine) →
+  **30 annonces récentes par (commune, type)**, pas de backfill. No-op tant que `SELOGER_ENABLED` est faux /
+  aucun transport configuré ; `SELOGER_RENDER_JS` inutile (ASP seul suffit).
 - **Recherche par rayon** (lat/lon/radius) : **Bien'ici + Leboncoin** (sources avec coordonnées ; PAP et
   SeLoger exclus — les runs rayon passent `sources=["bienici","leboncoin"]`).
   `services/geo.communes_within_radius()` énumère les communes du rayon (préfiltre par centroïdes de
@@ -145,8 +148,8 @@ complète et l'avancement. En résumé :
 - **Leboncoin** : scraper + transport Scrapfly prêts et testés (mocks). **Validation live à faire** avec
   une vraie clé Scrapfly : `LEBONCOIN_ENABLED=true`, `SCRAPFLY_API_KEY=...`. Surveiller le coût/crédits
   (pool résidentiel + ASP) et le taux de succès DataDome.
-- **SeLoger** : scraper + `get_text` transport prêts et testés (mocks). **Validation live à faire** avec une
-  vraie clé Scrapfly : `SELOGER_ENABLED=true`, `SCRAPFLY_API_KEY=...`. Le contrat des données embarquées
-  (`window["initialData"]`) est reconstitué depuis des références publiques → **vérifier/ajuster les mappings**
-  (`estateType`/`types`, `epc`, `photos`, pagination) à la 1ʳᵉ exécution réelle ; passer `SELOGER_RENDER_JS=true`
-  si les résultats reviennent vides (DataDome non franchi par l'ASP seul).
+- **SeLoger** : **validé en live** (Scrapfly réel, Bordeaux → 30 annonces, tous champs cœur). Désactivé par
+  défaut (`SELOGER_ENABLED=false`) — l'activer (`SELOGER_ENABLED=true`) fait dépenser des crédits Scrapfly à
+  chaque recherche, comme Leboncoin. Limite connue : **30 annonces/(commune, type)** (le SERP est une SPA, la
+  pagination HTML n'existe plus ; les pages suivantes passeraient par l'API interne `classified-search`, non
+  implémentée). Surveiller le coût/crédits si activé.

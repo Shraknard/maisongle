@@ -5,7 +5,6 @@ import json
 import logging
 import re
 import unicodedata
-import urllib.parse
 from typing import List, Optional
 
 from app.config import get_settings
@@ -15,53 +14,63 @@ from app.scrapers.transport import Transport, DirectCookieTransport, ScrapflyTra
 logger = logging.getLogger("scrapers.seloger")
 
 BASE = "https://www.seloger.com"
-LIST_URL = f"{BASE}/list.htm"
 
-MAX_PAGES = 5                   # refresh cap: newest pages / commune / run
-MAX_PAGES_FIRST = 20            # first-scrape backfill cap / commune
 REQUEST_DELAY = 1.0             # politeness pause between requests (seconds)
-# DataDome occasionally "stealth-blocks": HTTP 200 with no listings. Each Scrapfly
-# request uses a fresh residential IP, so an empty first page is retried a few
-# times to ride out a transient block (a genuinely empty commune just costs these
-# extra, bounded calls).
+# SeLoger's SERP is an SPA: the server renders only the first 30 results (page 1)
+# for SEO; deeper pages load client-side from an internal "classified-search" API,
+# and no URL param paginates the server HTML (LISTING-LISTpg/pg/page are ignored).
+# We therefore take the first page per (commune, type). DataDome occasionally
+# "stealth-blocks" (HTTP 200 with no listings); each Scrapfly request uses a fresh
+# residential IP, so we retry a few times to ride out a transient block.
 FIRST_PAGE_ATTEMPTS = 3
 RETRY_DELAY = 2.0
 
-# Our transaction int -> SeLoger `projects` code (2 = achat/vente, 1 = location).
-PROJECT = {0: "2", 1: "1"}
+# Our transaction int -> SeLoger URL distribution segment.
+DISTRIBUTION = {0: "achat", 1: "location"}
 
-# Our property type int -> SeLoger `types` code (PROVISIONAL — confirm live).
-TYPE_TO_SL = {
-    0: "1",   # appartement
-    1: "2",   # maison / villa
-    2: "9",   # parking / box
-    3: "4",   # terrain
-    4: "13",  # local commercial / boutique
-    5: "6",   # immeuble
-    6: "11",  # loft / atelier
+# Our property type int -> SeLoger URL type slug (``bien-<slug>``). One type per
+# URL — the results page filters by a single ``bien-…`` path segment.
+TYPE_TO_SLUG = {
+    0: "appartement",
+    1: "maison",
+    2: "parking",
+    3: "terrain",
+    4: "local-commercial",
+    5: "immeuble",
+    6: "loft",
 }
-DEFAULT_SL_TYPES = ["1", "2"]  # appartement + maison — the residential core
+# ``[]`` (tous types) falls back to the residential core — the only reliably
+# validated slugs; read-side filtering (routers/search) narrows further anyway.
+DEFAULT_TYPE_SLUGS = ["appartement", "maison"]
 
-# SeLoger `estateType` label (lowercased, accent-stripped) -> our int (response
-# side). Substring match, so "maison / villa" -> maison. PROVISIONAL.
-SL_LABEL_TO_TYPE = {
-    "appartement": 0, "studio": 0, "duplex": 0,
-    "maison": 1, "villa": 1, "propriete": 1, "chateau": 1,
-    "parking": 2, "box": 2, "garage": 2,
-    "terrain": 3,
-    "local": 4, "boutique": 4, "bureau": 4, "commerce": 4, "fonds": 4,
-    "immeuble": 5,
-    "loft": 6, "atelier": 6,
+# SeLoger ``rawData.propertyType`` enum -> our int (response side).
+SL_PTYPE_TO_INT = {
+    "APARTMENT": 0,
+    "HOUSE": 1, "VILLA": 1, "PROPERTY": 1, "CASTLE": 1, "MANSION": 1,
+    "PARKING": 2, "GARAGE": 2, "BOX": 2,
+    "LAND": 3, "TERRAIN": 3,
+    "SHOP": 4, "OFFICE": 4, "BUSINESS": 4, "PREMISES": 4, "COMMERCIAL": 4,
+    "OFFICES": 4, "STORE": 4,
+    "BUILDING": 5,
+    "LOFT": 6, "ATELIER": 6,
 }
 
-# ``window["initialData"] = JSON.parse("<js-escaped json>")`` — SeLoger embeds the
-# whole result set as a JS string literal. DOTALL + greedy so it spans newlines and
-# stops at the *last* ")" (escaped inner quotes are "\"", never a bare '")').
-_INITIAL_DATA_RE = re.compile(r'window\["initialData"\]\s*=\s*JSON\.parse\("(.*)"\)', re.DOTALL)
+# SeLoger embeds the whole result set as a JS string literal:
+#   window["__UFRN_FETCHER__"] = JSON.parse("<js-escaped json>")
+# (this replaced the older ``window["initialData"]`` blob). The listings live at
+# ``data["<serp-service>"]["pageProps"]``.
+_FETCHER_MARKER = '__UFRN_FETCHER__'
+_JS_PARSE = 'JSON.parse("'
 
 
 def _strip_accents(text: str) -> str:
     return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+
+
+def _slugify(name: str) -> str:
+    """City name -> SeLoger URL slug ('Saint-Étienne' -> 'saint-etienne')."""
+    s = _strip_accents(name or "").lower()
+    return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
 
 
 def _dept(insee: Optional[str]) -> str:
@@ -83,107 +92,98 @@ def _to_float(value) -> Optional[float]:
         return None
 
 
-def extract_initial_data(html: str) -> Optional[dict]:
-    """Pull the ``window["initialData"] = JSON.parse("...")`` blob out of the HTML.
+def _letter(value) -> Optional[str]:
+    v = str(value or "").strip().upper()
+    return v if v in ("A", "B", "C", "D", "E", "F", "G") else None
 
-    The captured group is a JS string literal whose content is JSON. JSON string
-    escapes are a superset of what SeLoger uses here, so we decode it in two steps:
-    load the literal as a JSON string to recover the JSON text (handles ``\\"``,
-    ``\\uXXXX``, ``\\n``), then load that text into the data object. This preserves
-    accented French characters, unlike a bare ``unicode_escape`` decode.
+
+def extract_fetcher_data(html: str) -> Optional[dict]:
+    """Pull the ``window["__UFRN_FETCHER__"] = JSON.parse("...")`` blob out of the HTML.
+
+    The captured group is a JS string literal whose content is JSON, decoded in two
+    steps (JS literal -> JSON text -> object) so ``\\"``/``\\uXXXX``/``\\n`` and
+    accented French characters all survive. Located by string search rather than a
+    regex because the blob is ~1 MB and there are several ``JSON.parse`` scripts.
     """
-    m = _INITIAL_DATA_RE.search(html)
-    if not m:
+    i = html.find(f'id="{_FETCHER_MARKER}"')
+    if i == -1:
         return None
+    p = html.find(_JS_PARSE, i)
+    if p == -1:
+        return None
+    start = p + len(_JS_PARSE)
+    end = html.find("</script>", start)
+    if end == -1:
+        return None
+    seg = html[start:end].rstrip().rstrip(";").rstrip()
+    if not seg.endswith('")'):
+        logger.warning("seloger: fin de blob __UFRN_FETCHER__ inattendue")
+        return None
+    seg = seg[:-2]  # drop the trailing ")
     try:
-        inner = json.loads(f'"{m.group(1)}"')  # JS literal -> JSON text
-        data = json.loads(inner)               # JSON text -> object
+        inner = json.loads(f'"{seg}"')  # JS literal -> JSON text
+        data = json.loads(inner)        # JSON text -> object
     except (ValueError, TypeError):
-        logger.warning("seloger: initialData illisible")
+        logger.warning("seloger: __UFRN_FETCHER__ illisible")
         return None
     return data if isinstance(data, dict) else None
 
 
+def _page_props(data: dict) -> Optional[dict]:
+    """The SERP service's ``pageProps`` (holds the classifieds id list + card data)."""
+    for value in (data.get("data") or {}).values():
+        if isinstance(value, dict):
+            pp = value.get("pageProps")
+            if isinstance(pp, dict) and "classifieds" in pp and "classifiedsData" in pp:
+                return pp
+    return None
+
+
 def classified_cards(data: dict) -> List[dict]:
-    """Return the real listing cards (``cardType == "classified"``), skipping ads.
-
-    The listings live at ``datasets[i]["cards"]["list"]``; we take the first
-    dataset that carries any.
-    """
-    for ds in data.get("datasets") or []:
-        cards = ((ds or {}).get("cards") or {}).get("list")
-        if cards:
-            return [
-                c for c in cards
-                if isinstance(c, dict) and c.get("cardType") == "classified"
-            ]
-    return []
-
-
-def _total_pages(data: dict) -> Optional[int]:
-    """Best-effort page count from the navigation block (shape PROVISIONAL)."""
-    for ds in data.get("datasets") or []:
-        nav = (ds or {}).get("navigation") or {}
-        pagination = nav.get("pagination") or nav
-        for key in ("pageCount", "totalPages", "pages"):
-            total = pagination.get(key)
-            if total:
-                return _to_int(total)
-    return None
-
-
-def _price(pricing: dict) -> Optional[float]:
-    """Prefer the numeric ``rawPrice``; fall back to parsing the formatted string."""
-    if not isinstance(pricing, dict):
-        return None
-    raw = _to_float(pricing.get("rawPrice"))
-    if raw:
-        return raw
-    for key in ("price", "monthlyPrice"):  # NOT squareMeterPrice (that's €/m²)
-        val = pricing.get(key)
-        if isinstance(val, str):
-            digits = re.sub(r"[^\d]", "", val.split("€")[0])
-            if digits:
-                return float(digits)
-    return None
+    """Return the listing cards, resolving each id in ``classifieds`` against the
+    ``classifiedsData`` map."""
+    pp = _page_props(data)
+    if not pp:
+        return []
+    by_id = pp.get("classifiedsData") or {}
+    cards = []
+    for cid in pp.get("classifieds") or []:
+        card = by_id.get(cid)
+        if isinstance(card, dict):
+            cards.append(card)
+    return cards
 
 
 def _property_type(card: dict) -> Optional[int]:
-    label = _strip_accents((card.get("estateType") or "").lower())
-    for key, val in SL_LABEL_TO_TYPE.items():
-        if key in label:
-            return val
+    raw = (card.get("rawData") or {}).get("propertyType")
+    return SL_PTYPE_TO_INT.get(str(raw or "").upper())
+
+
+def _floor(card: dict) -> Optional[int]:
+    """Best-effort floor from the ``numberOfFloors`` hard fact ('Étage 2/4' -> 2,
+    'RDC/2' -> 0)."""
+    for fact in (card.get("hardFacts") or {}).get("facts") or []:
+        if fact.get("type") == "numberOfFloors":
+            value = str(fact.get("value") or "")
+            if "RDC" in value.upper():
+                return 0
+            m = re.search(r"\d+", value)
+            return int(m.group()) if m else None
     return None
 
 
-def _epc(card: dict):
-    """Energy / GHG class from ``epc`` (may be a bare letter or a dict). PROVISIONAL."""
-    epc = card.get("epc")
-    energy = ghg = None
-    if isinstance(epc, str):
-        energy = epc
-    elif isinstance(epc, dict):
-        energy = epc.get("energyValue") or epc.get("category") or epc.get("value")
-        ghg = epc.get("gasValue") or epc.get("gesValue") or epc.get("ges")
-
-    def _letter(v) -> Optional[str]:
-        v = str(v or "").strip().upper()
-        return v if v in ("A", "B", "C", "D", "E", "F", "G") else None
-
-    return _letter(energy), _letter(ghg)
-
-
 def _agency(card: dict) -> Optional[str]:
-    contact = card.get("contact") or {}
-    return contact.get("contactName") or contact.get("agencyName") or None
+    provider = card.get("provider") or {}
+    if provider.get("isPrivateOwner"):
+        return None
+    inter = provider.get("intermediaryCard") or {}
+    return inter.get("title") or (card.get("cardProvider") or {}).get("title") or None
 
 
 def _pictures(card: dict) -> List[str]:
-    for key in ("photos", "pictures", "pictureUrls"):
-        pics = card.get(key)
-        if isinstance(pics, list):
-            return [p for p in pics if isinstance(p, str)]
-    return []
+    images = (card.get("gallery") or {}).get("images") or []
+    return [im.get("url") for im in images
+            if isinstance(im, dict) and isinstance(im.get("url"), str)]
 
 
 class SelogerScraper(BaseScraper):
@@ -194,15 +194,20 @@ class SelogerScraper(BaseScraper):
     Without one the scraper is a no-op, so it never breaks a search; the scrape
     service also isolates it per source.
 
-    Flow: one ``list.htm`` request per commune (paginated), locating the
-    ``window["initialData"]`` JSON blob and reading its listing cards. SeLoger
-    search cards carry NO coordinates (those live only on detail pages), so — like
-    PAP — listings have no map marker and are tagged with the searched commune's
-    INSEE for the DB read filter.
+    Flow: SeLoger's ``list.htm`` query endpoint is dead (500s), so we hit the slug
+    results pages — ``/immobilier/{achat|location}/immo-<city>-<dept>/bien-<type>/``
+    — one request per (commune, type). The results are embedded as
+    ``window["__UFRN_FETCHER__"] = JSON.parse("…")``; listings sit in the SERP
+    service's ``pageProps.classifieds`` (id list) resolved against
+    ``pageProps.classifiedsData``. Only the first page (30 cards) is reachable — the
+    SERP is an SPA that loads further pages from an internal API — so SeLoger
+    contributes the 30 newest listings per (commune, type).
 
-    NOTE: the embedded-data contract (field names, `types`/`epc` shapes, pagination
-    metadata) is reconstructed from public references and NOT yet validated live.
-    Expect to adjust the mappings above once run against a real Scrapfly key.
+    SeLoger search cards carry NO coordinates and NO INSEE (only a slug-resolved
+    geo hierarchy), so — like PAP — listings have no map marker and are tagged with
+    the searched commune's INSEE; SeLoger is excluded from radius search. Server-side
+    budget/surface/room filters are skipped (the read side filters the DB), so the
+    URL only pins location + property type.
     """
     source = "seloger"
 
@@ -242,9 +247,6 @@ class SelogerScraper(BaseScraper):
         transport = self._transport()
         if transport is None or not criteria.communes:
             return []
-        if criteria.first_scrape:
-            logger.info("seloger: 1er scrape — backfill (jusqu'à %d pages/commune)",
-                        MAX_PAGES_FIRST)
         try:
             return await self._search_communes(transport, criteria)
         finally:
@@ -257,96 +259,70 @@ class SelogerScraper(BaseScraper):
         results: List[NormalizedListing] = []
         consecutive_failures = 0
         for commune in criteria.communes:
-            try:
-                ads = await self._fetch_commune(transport, criteria, commune)
-            except Exception as exc:  # noqa: BLE001 — isolate each commune
-                logger.error("seloger: erreur pour %s: %s", commune.insee, exc)
-                ads = None
-            if ads is None:  # transport failure — bail out before we trip rate limits
-                consecutive_failures += 1
-                if consecutive_failures >= 2:
-                    logger.warning("seloger: 2 échecs consécutifs — stop")
-                    break
-                continue
-            consecutive_failures = 0
-            logger.info("seloger: %s -> %d annonces", commune.name, len(ads))
-            results.extend(ads)
+            seen: set[str] = set()
+            commune_hits = 0
+            for type_slug in self._type_slugs(criteria):
+                try:
+                    ads = await self._fetch(transport, criteria, commune, type_slug, seen)
+                except Exception as exc:  # noqa: BLE001 — isolate each request
+                    logger.error("seloger: erreur pour %s/%s: %s",
+                                 commune.insee, type_slug, exc)
+                    ads = None
+                if ads is None:  # transport failure — bail before we trip rate limits
+                    consecutive_failures += 1
+                    if consecutive_failures >= 2:
+                        logger.warning("seloger: 2 échecs consécutifs — stop")
+                        return results
+                    continue
+                consecutive_failures = 0
+                commune_hits += len(ads)
+                results.extend(ads)
+                await asyncio.sleep(REQUEST_DELAY)  # politeness between requests
+            logger.info("seloger: %s -> %d annonces", commune.name, commune_hits)
         return results
 
-    def _sl_types(self, criteria: SearchCriteria) -> List[str]:
+    def _type_slugs(self, criteria: SearchCriteria) -> List[str]:
         if not criteria.property_types:
-            return DEFAULT_SL_TYPES
-        # dict.fromkeys keeps order and dedups (e.g. local + immeuble differ, but
-        # any future collisions collapse cleanly).
-        out = list(dict.fromkeys(
-            TYPE_TO_SL[t] for t in criteria.property_types if t in TYPE_TO_SL
+            return list(DEFAULT_TYPE_SLUGS)
+        slugs = list(dict.fromkeys(
+            TYPE_TO_SLUG[t] for t in criteria.property_types if t in TYPE_TO_SLUG
         ))
-        return out or DEFAULT_SL_TYPES
+        return slugs or list(DEFAULT_TYPE_SLUGS)
 
-    def _page_url(self, criteria: SearchCriteria, commune: Commune, page: int) -> str:
-        # SeLoger filters by INSEE via the JSON `places` param; this avoids having
-        # to slugify the city (unlike PAP's path-based URLs).
-        places = json.dumps([{"inseeCodes": [commune.insee]}], separators=(",", ":"))
-        params = {
-            "projects": PROJECT.get(criteria.transaction_type, "2"),
-            "types": ",".join(self._sl_types(criteria)),
-            "places": places,
-            "enterprise": "0",
-            "qsVersion": "1.0",
-            "LISTING-LISTpg": str(page),
-        }
-        if criteria.budget_min is not None or criteria.budget_max is not None:
-            params["price"] = f"{criteria.budget_min or 0}/{criteria.budget_max or 'NaN'}"
-        if criteria.surface_min is not None or criteria.surface_max is not None:
-            params["surface"] = f"{criteria.surface_min or 0}/{criteria.surface_max or 'NaN'}"
-        if criteria.room_min is not None or criteria.room_max is not None:
-            # SeLoger rooms is an enum list (1..5, where 5 means "5+").
-            lo = max(criteria.room_min or 1, 1)
-            hi = min(criteria.room_max or 5, 5)
-            params["rooms"] = ",".join(str(r) for r in range(lo, hi + 1)) or "5"
-        return LIST_URL + "?" + urllib.parse.urlencode(params)
+    def _page_url(self, criteria: SearchCriteria, commune: Commune,
+                  type_slug: str) -> str:
+        dist = DISTRIBUTION.get(criteria.transaction_type, "achat")
+        slug = _slugify(commune.name)
+        dept = _dept(commune.insee)
+        return f"{BASE}/immobilier/{dist}/immo-{slug}-{dept}/bien-{type_slug}/"
 
-    async def _fetch_commune(
+    async def _fetch(
         self, transport: Transport, criteria: SearchCriteria, commune: Commune,
+        type_slug: str, seen: set,
     ) -> Optional[List[NormalizedListing]]:
-        """Page through one commune's results. Returns None on transport failure
-        (vs [] for a genuinely empty commune) so the caller can bail on a block."""
+        """Fetch one (commune, type) — the first results page only (see the module
+        note). Returns None on transport failure (vs [] for a genuinely empty
+        result) so the caller can bail on a block; an empty first page is retried a
+        few times to ride out a DataDome stealth-block."""
+        url = self._page_url(criteria, commune, type_slug)
+        data = None
+        for attempt in range(FIRST_PAGE_ATTEMPTS):
+            html = await transport.get_text(url, self.BASE_HEADERS)
+            data = extract_fetcher_data(html) if html else None
+            if data and classified_cards(data):
+                break
+            if attempt + 1 < FIRST_PAGE_ATTEMPTS:
+                await asyncio.sleep(RETRY_DELAY)
+
+        if not data:  # blocked, error or unparseable
+            return None
+
         listings: List[NormalizedListing] = []
-        seen: set[str] = set()
-        max_pages = MAX_PAGES_FIRST if criteria.first_scrape else MAX_PAGES
-
-        for page in range(1, max_pages + 1):
-            url = self._page_url(criteria, commune, page)
-            # Retry an empty/failed first page (likely a DataDome stealth-block);
-            # later pages are taken at face value.
-            attempts = FIRST_PAGE_ATTEMPTS if page == 1 else 1
-            data = None
-            for attempt in range(attempts):
-                html = await transport.get_text(url, self.BASE_HEADERS)
-                data = extract_initial_data(html) if html else None
-                if data and classified_cards(data):
-                    break
-                if attempt + 1 < attempts:
-                    await asyncio.sleep(RETRY_DELAY)
-
-            if not data:  # blocked, error or unparseable
-                if page == 1:
-                    return None  # first page failed → signal transport failure
-                break
-
-            cards = classified_cards(data)
-            if not cards:
-                break
-            for card in cards:
-                item = self._normalize(card, criteria, commune)
-                if item and item.source_id not in seen:
-                    seen.add(item.source_id)
-                    listings.append(item)
-
-            total_pages = _total_pages(data)
-            if total_pages is not None and page >= total_pages:
-                break
-            await asyncio.sleep(REQUEST_DELAY)
+        for card in classified_cards(data):
+            item = self._normalize(card, criteria, commune)
+            if item and item.source_id not in seen:
+                seen.add(item.source_id)
+                listings.append(item)
         return listings
 
     def _normalize(self, card: dict, criteria: SearchCriteria,
@@ -355,33 +331,39 @@ class SelogerScraper(BaseScraper):
         if not cid:
             return None
 
-        pricing = card.get("pricing") or {}
-        price = _price(pricing)
-        surface = _to_float(card.get("surface"))
-        energy, ghg = _epc(card)
+        raw = card.get("rawData") or {}
+        price = _to_float(raw.get("price"))
+        surface = _to_float((raw.get("surface") or {}).get("main"))
+        land_surface = _to_float((raw.get("surface") or {}).get("plot"))
+        address = (card.get("location") or {}).get("address") or {}
+        description = card.get("mainDescription") or {}
+        title = description.get("headline") or (card.get("hardFacts") or {}).get("title")
 
         return NormalizedListing(
             source=self.source,
             source_id=str(cid),
-            title=card.get("title"),
-            description=card.get("description"),
+            title=title,
+            description=description.get("description"),
             price=price,
             price_per_meter=round(price / surface, 2) if price and surface else None,
             surface=surface,
-            room=_to_int(card.get("rooms")),
-            bedroom=_to_int(card.get("bedrooms")),
+            land_surface=land_surface,
+            room=_to_int(raw.get("nbroom")),
+            bedroom=_to_int(raw.get("nbbedroom")),
+            floor=_floor(card),
             property_type=_property_type(card),
             transaction_type=criteria.transaction_type,
-            city_name=card.get("cityLabel") or commune.name,
-            city_zipcode=card.get("zipCode") or commune.zipcode,
+            city_name=address.get("city") or commune.name,
+            city_zipcode=address.get("zipCode") or commune.zipcode,
             # Tagged with the searched commune (SeLoger search cards have no INSEE
             # and no coordinates). normalize_insee in scrape._apply maps PLM
             # arrondissements to the parent commune.
             city_insee=commune.insee,
             department_code=_dept(commune.insee),
-            energy_category=energy,
-            ghg_category=ghg,
+            energy_category=_letter(card.get("energyClass")),
+            # GHG/GES is only on detail pages, not search cards.
+            ghg_category=None,
             agency=_agency(card),
-            url=card.get("classifiedURL"),
+            url=card.get("url"),
             pictures=_pictures(card),
         )

@@ -84,18 +84,28 @@ Nouvelles tables (forme normalisée alignée sur le modèle `Favorite`) :
       chaque retry sur IP résidentielle fraîche. `render_js` interdit en POST → reste `False`.
     - Constat initial : en pur HTTP depuis une IP datacenter, DataDome renvoie 403 `x-datadome: protected`
       + `captcha-delivery.com` et flague l'IP en quelques requêtes → d'où le routage Scrapfly.
-- [x] Scraper **SeLoger** (`scrapers/seloger.py`, HTML DataDome) — **scaffolding, validation live à faire**.
-  Réutilise le transport (nouveau `get_text` GET/HTML). Une requête `list.htm` par commune
-  (`places=[{"inseeCodes":[…]}]`, filtre INSEE — pas de slug), pagination `LISTING-LISTpg`. Les résultats
-  sont un blob JSON embarqué (`window["initialData"] = JSON.parse("…")`) : on l'extrait, on décode le
-  littéral JS (double `json.loads`, accents préservés), on lit `datasets[i].cards.list` en gardant
-  `cardType == "classified"`. Comme PAP : **pas de coordonnées** sur les cartes de recherche (elles ne sont
-  que sur les pages détail via `__NEXT_DATA__`) → pas de marqueur carte, INSEE = commune cherchée ; **exclu
-  du rayon** (les runs rayon passent `sources=["bienici","leboncoin"]`). No-op tant que `SELOGER_ENABLED`
-  est faux ou qu'aucun transport n'est configuré. Testé sur mocks (extraction/normalisation/URL/no-op).
-  - **Contrat provisoire** (noms de champs `estateType`/`epc`, codes `types`, métadonnées pagination,
-    champ `photos`) reconstitué depuis des références publiques — à ajuster à la 1ʳᵉ validation live
-    (`SELOGER_ENABLED=true`, `SCRAPFLY_API_KEY=…` ; passer `SELOGER_RENDER_JS=true` si retours vides/bloqués).
+- [x] Scraper **SeLoger** (`scrapers/seloger.py`, HTML DataDome) — **validé en live** (clé Scrapfly réelle,
+  Bordeaux : HTTP 200, 30 annonces parsées, 100 % des champs cœur prix/surface/pièces/DPE/agence/URL/photos).
+  Réutilise le transport (`get_text` GET/HTML). Le contrat provisoire (reconstitué de références publiques)
+  était **largement faux** — corrigé à la validation live :
+  - **`list.htm` est mort** (HTTP 500 sur toute requête query `places`/`inseeCodes`, quel que soit le format).
+    La recherche passe désormais par les URLs *slug* : `/immobilier/{achat|location}/immo-{ville}-{dept}/
+    bien-{type}/` — une requête par (commune, type). `_slugify()` (accents retirés) construit le slug depuis
+    le nom de commune ; `bien-{type}` filtre le type (défaut : appartement + maison). Les filtres
+    budget/surface/pièces sont laissés au **filtrage DB côté lecture** (`routers/search`), pas à l'URL.
+  - Données embarquées : `window["__UFRN_FETCHER__"] = JSON.parse("…")` (remplace `initialData`) → service
+    SERP `pageProps.classifieds` (liste d'IDs) résolue via `pageProps.classifiedsData`. Champs propres :
+    `rawData.{price,surface.main,nbroom,nbbedroom,propertyType}` (enum `APARTMENT`/`HOUSE`…), `energyClass`,
+    `location.address`, `gallery.images[].url`, `provider.{isPrivateOwner,intermediaryCard.title}`, `url`.
+    Extraction par recherche de sous-chaîne (blob ~1 Mo) + double `json.loads` (accents préservés).
+  - **Pagination impossible côté HTML** : le SERP est une SPA — le serveur ne rend que la 1ʳᵉ page (30) pour
+    le SEO ; **aucun param d'URL ne pagine** (`LISTING-LISTpg`/`pg`/`page` ignorés, `pageProps.page` reste 1),
+    les pages suivantes viennent d'une API interne `classified-search` (non implémentée). → **SeLoger = 30
+    annonces récentes par (commune, type)**, pas de backfill profond (`first_scrape` sans effet). IDs
+    alphanumériques (`267HULUINK1S`).
+  - Comme PAP : **pas de coordonnées** sur les cartes → pas de marqueur carte, INSEE = commune cherchée,
+    **exclu du rayon** (les runs rayon passent `sources=["bienici","leboncoin"]`). No-op tant que
+    `SELOGER_ENABLED` est faux / aucun transport configuré ; `SELOGER_RENDER_JS` inutile (ASP seul suffit).
 - [ ] *Suivi Leboncoin* : surveiller coût/crédits Scrapfly (résidentiel + ASP + retries) et taux de
   blocage furtif ; ajuster `COMMUNE_RADIUS_M` / `FIRST_PAGE_ATTEMPTS` si besoin.
 
