@@ -122,7 +122,7 @@ class ScrapflyTransport:
 
     def __init__(self, api_key: str, country: str = "fr",
                  proxy_pool: str = "public_residential_pool",
-                 render_js: bool = False):
+                 render_js: bool = False, max_credits: int = 0):
         try:
             from scrapfly import ScrapflyClient, ScrapeConfig
         except ImportError as exc:  # pragma: no cover
@@ -135,6 +135,10 @@ class ScrapflyTransport:
         self.proxy_pool = proxy_pool
         self.render_js = render_js
         self.total_cost = 0  # Scrapfly credits billed over this transport's life
+        # Hard budget guard: once this many credits are spent, further requests
+        # return None (a source builds a fresh transport per run, so it caps
+        # per-source-per-run). 0 disables the cap.
+        self.max_credits = max_credits
 
     def _config(self, url: str, method: str, *, body: Optional[str] = None,
                 headers: Optional[dict] = None, render_js: Optional[bool] = None):
@@ -155,6 +159,12 @@ class ScrapflyTransport:
 
     async def _scrape(self, config, url: str):
         """Run a scrape, bill its credits, and return the raw content (or None)."""
+        if self.max_credits and self.total_cost >= self.max_credits:
+            logger.warning(
+                "transport(scrapfly): plafond de %d crédits atteint (%d) — stop",
+                self.max_credits, self.total_cost,
+            )
+            return None
         try:
             res = await self._client.async_scrape(config)
         except Exception as exc:  # noqa: BLE001 — Scrapfly raises on quota/credit/network

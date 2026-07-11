@@ -7,6 +7,7 @@ scraper, upsert the results, and track price changes.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
@@ -23,6 +24,12 @@ from app.services.geo import normalize_insee_code
 logger = logging.getLogger("services.scrape")
 
 DEFAULT_TTL = 300  # 5 minutes
+# A listing not re-seen for this long is deactivated (sold/rented/delisted). The
+# window is generous on purpose: sources with capped pagination (SeLoger 30/type,
+# Leboncoin/PAP page caps on refresh) don't return their whole catalogue each run,
+# so a short window would wrongly retire deep listings. Re-seeing one reactivates
+# it (``_upsert`` sets ``active = True``), so this self-heals.
+STALE_DAYS = 14
 
 _LISTING_FIELDS = (
     "title", "description", "price", "price_per_meter", "surface", "land_surface",
@@ -77,23 +84,32 @@ async def _run(
     total_found = 0
     total_new = 0
 
-    for scraper in get_scrapers(sources):
-        try:
-            items = await scraper.search(criteria)
-            n_new = _upsert(db, scraper.source, items, hidden)
-            entry = {"found": len(items), "new": n_new}
-            # Paid transports (Scrapfly) expose the credits billed by this run.
-            cost = getattr(scraper, "last_cost", None)
-            if cost:
-                entry["cost_credits"] = cost
-            detail[scraper.source] = entry
-            total_found += len(items)
-            total_new += n_new
-            logger.info("%s: %d annonces, %d nouvelles", scraper.source, len(items), n_new)
-        except Exception as exc:  # noqa: BLE001 — isolate each source
-            logger.exception("scraper %s a échoué", scraper.source)
-            detail[scraper.source] = {"error": str(exc)}
+    # Scrape every source concurrently (network I/O is the slow part); the DB
+    # upserts below stay sequential since the Session is not concurrency-safe.
+    scrapers = get_scrapers(sources)
+    outcomes = await asyncio.gather(
+        *(s.search(criteria) for s in scrapers), return_exceptions=True
+    )
+
+    for scraper, outcome in zip(scrapers, outcomes):
+        if isinstance(outcome, Exception):  # isolate each source
+            logger.error("scraper %s a échoué: %s", scraper.source, outcome)
+            detail[scraper.source] = {"error": str(outcome)}
             run.status = "partial"
+            continue
+        items = outcome
+        n_new = _upsert(db, scraper.source, items, hidden)
+        entry = {"found": len(items), "new": n_new}
+        # Paid transports (Scrapfly) expose the credits billed by this run.
+        cost = getattr(scraper, "last_cost", None)
+        if cost:
+            entry["cost_credits"] = cost
+        detail[scraper.source] = entry
+        total_found += len(items)
+        total_new += n_new
+        logger.info("%s: %d annonces, %d nouvelles", scraper.source, len(items), n_new)
+
+    _deactivate_stale(db)
 
     run.finished_at = _now()
     run.n_found = total_found
@@ -115,7 +131,6 @@ def _upsert(
             continue
 
         gh = geohash_encode(item.latitude, item.longitude)
-        dk = dedup_key(gh, item.surface, item.room)
 
         existing = (
             db.query(Listing)
@@ -126,12 +141,12 @@ def _upsert(
         if existing:
             if item.price and existing.price != item.price:
                 db.add(PriceHistory(listing_id=existing.id, price=item.price))
-            _apply(existing, item, gh, dk)
+            _apply(existing, item, gh)
             existing.last_seen = now
             existing.active = True
         else:
             listing = Listing(source=source, source_id=item.source_id)
-            _apply(listing, item, gh, dk)
+            _apply(listing, item, gh)
             listing.first_seen = now
             listing.last_seen = now
             listing.active = True
@@ -144,7 +159,15 @@ def _upsert(
     return n_new
 
 
-def _apply(listing: Listing, item: NormalizedListing, gh, dk) -> None:
+def _deactivate_stale(db: Session) -> None:
+    """Retire listings not re-seen for ``STALE_DAYS`` (see the constant's note)."""
+    cutoff = _now() - timedelta(days=STALE_DAYS)
+    db.query(Listing).filter(
+        Listing.active.is_(True), Listing.last_seen < cutoff
+    ).update({Listing.active: False}, synchronize_session=False)
+
+
+def _apply(listing: Listing, item: NormalizedListing, gh) -> None:
     for fld in _LISTING_FIELDS:
         setattr(listing, fld, getattr(item, fld))
     # Normalize PLM arrondissement INSEE to the parent commune so listings are
@@ -152,4 +175,9 @@ def _apply(listing: Listing, item: NormalizedListing, gh, dk) -> None:
     if listing.city_insee:
         listing.city_insee = normalize_insee_code(listing.city_insee)
     listing.geohash = gh
-    listing.dedup_key = dk
+    # Cross-source dedup fingerprint — computed from the normalized fields so all
+    # sources (with or without coordinates) cluster on the same key.
+    listing.dedup_key = dedup_key(
+        listing.city_insee, listing.transaction_type, listing.property_type,
+        listing.surface, listing.room, listing.price,
+    )

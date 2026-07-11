@@ -128,6 +128,7 @@ class LeboncoinScraper(BaseScraper):
             return ScrapflyTransport(
                 s.scrapfly_api_key, country=s.scrapfly_country,
                 proxy_pool=s.scrapfly_proxy_pool,
+                max_credits=s.scrapfly_max_credits_per_run,
             )
         if s.leboncoin_transport == "cookie":
             cookie = (s.leboncoin_datadome or "").strip()

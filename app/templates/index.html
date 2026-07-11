@@ -5,18 +5,18 @@
 {% block content %}
 <div class="space-y-6">
     <!-- Search Form -->
-    <div class="bg-white rounded-xl shadow-sm p-6">
-        <h1 class="text-2xl font-bold text-gray-900 mb-6">Rechercher un bien immobilier</h1>
+    <div class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Rechercher un bien immobilier</h1>
         
         <form id="searchForm" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- City autocomplete (multi-select) -->
                 <div class="relative lg:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Villes ou codes postaux</label>
-                    <input type="text" id="citySearch" placeholder="Tapez une ville et cliquez pour l'ajouter..." 
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Villes ou codes postaux</label>
+                    <input type="text" id="citySearch" aria-expanded="false" aria-haspopup="listbox" placeholder="Tapez une ville et cliquez pour l'ajouter..." 
                            autocomplete="off"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <div id="cityDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    <div id="cityDropdown" role="listbox" class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                     </div>
                     <!-- Selected cities tags -->
                     <div id="selectedCities" class="flex flex-wrap gap-2 mt-2">
@@ -25,7 +25,7 @@
                 
                 <!-- Radius -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Rayon de recherche</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rayon de recherche</label>
                     <div class="flex items-center gap-2">
                         <input type="checkbox" id="radiusEnabled" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
                         <input type="range" id="radiusSlider" name="radius" min="1" max="100" value="5" disabled
@@ -36,37 +36,37 @@
                 
                 <!-- Department -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Département</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Département</label>
                     <input type="text" name="department" placeholder="Ex: 75, 77..." 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                 </div>
                 
                 <!-- Property Type (multi-select dropdown) -->
                 <div class="relative">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Type de bien</label>
-                    <button type="button" id="propertyTypeBtn" onclick="togglePropertyTypeDropdown()" 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-left bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent flex justify-between items-center">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type de bien</label>
+                    <button type="button" id="propertyTypeBtn" onclick="togglePropertyTypeDropdown()" aria-expanded="false" aria-haspopup="listbox" 
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-left bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent flex justify-between items-center">
                         <span id="propertyTypeLabel">Tous les types</span>
                         <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
                     </button>
-                    <div id="propertyTypeDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden">
-                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b">
+                    <div id="propertyTypeDropdown" role="listbox" class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg hidden">
+                        <label role="option" class="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b">
                             <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="0" checked>
                             <span class="ml-2 text-sm">Appartement</span>
                         </label>
-                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b">
+                        <label role="option" class="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b">
                             <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="1" checked>
                             <span class="ml-2 text-sm">Maison</span>
                         </label>
-                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b">
+                        <label role="option" class="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b">
                             <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="3">
                             <span class="ml-2 text-sm">Terrain</span>
                         </label>
-                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b">
+                        <label role="option" class="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b">
                             <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="4">
                             <span class="ml-2 text-sm">Local commercial</span>
                         </label>
-                        <label class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                        <label role="option" class="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                             <input type="checkbox" class="property-type-cb w-4 h-4 text-blue-600 rounded" value="5">
                             <span class="ml-2 text-sm">Immeuble</span>
                         </label>
@@ -75,67 +75,94 @@
                 
                 <!-- Transaction Type -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Transaction</label>
-                    <select name="transaction_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Transaction</label>
+                    <select name="transaction_type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                         <option value="0">Vente</option>
                         <option value="1">Location</option>
                     </select>
                 </div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Price -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Prix min (€)</label>
-                    <input type="number" name="budget_min" placeholder="0" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            
+            <button type="button" onclick="document.getElementById('advancedFilters').classList.toggle('hidden')" class="md:hidden w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-center mb-4">
+                <span>Filtres avancés</span>
+                <i data-lucide="sliders" class="w-4 h-4"></i>
+            </button>
+            <div id="advancedFilters" class="hidden md:block space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Price -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prix min (€)</label>
+                        <input type="number" name="budget_min" placeholder="0" 
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prix max (€)</label>
+                        <input type="number" name="budget_max" placeholder="1000000" 
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    </div>
+                    
+                    <!-- Surface -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Surface min (m²)</label>
+                        <input type="number" name="surface_min" placeholder="0" 
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Surface max (m²)</label>
+                        <input type="number" name="surface_max" placeholder="500" 
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    </div>
                 </div>
                 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Prix max (€)</label>
-                    <input type="number" name="budget_max" placeholder="1000000" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-                
-                <!-- Surface -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Surface min (m²)</label>
-                    <input type="number" name="surface_min" placeholder="0" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Surface max (m²)</label>
-                    <input type="number" name="surface_max" placeholder="500" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Rooms -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pièces min</label>
+                        <input type="number" name="room_min" placeholder="1" min="1" 
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pièces max</label>
+                        <input type="number" name="room_max" placeholder="10" 
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    </div>
+                    
+                    <!-- Bedrooms -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chambres min</label>
+                        <input type="number" name="bedroom_min" placeholder="1" min="0" 
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chambres max</label>
+                        <input type="number" name="bedroom_max" placeholder="6" 
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                    </div>
                 </div>
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Rooms -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Pièces min</label>
-                    <input type="number" name="room_min" placeholder="1" min="1" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Pièces max</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pièces max</label>
                     <input type="number" name="room_max" placeholder="10" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                 </div>
                 
                 <!-- Bedrooms -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Chambres min</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chambres min</label>
                     <input type="number" name="bedroom_min" placeholder="1" min="0" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Chambres max</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chambres max</label>
                     <input type="number" name="bedroom_max" placeholder="6" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                 </div>
             </div>
             
@@ -153,17 +180,17 @@
         
         <!-- Saved searches -->
         <div id="savedSearchesSection" class="mt-4 pt-4 border-t hidden">
-            <h3 class="text-sm font-medium text-gray-700 mb-2">Recherches sauvegardées</h3>
+            <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recherches sauvegardées</h3>
             <div id="savedSearchesList" class="flex flex-wrap gap-2">
             </div>
         </div>
     </div>
     
     <!-- Map -->
-    <div class="bg-white rounded-xl shadow-sm p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-4">
         <div class="flex justify-between items-center mb-3">
-            <h2 class="text-lg font-semibold text-gray-900">Carte des annonces</h2>
-            <button onclick="openMapFullscreen()" class="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Carte des annonces</h2>
+            <button onclick="openMapFullscreen()" class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 transition">
                 <i data-lucide="maximize-2" class="w-4 h-4"></i>
                 <span>Agrandir</span>
             </button>
@@ -172,16 +199,16 @@
     </div>
     
     <!-- Fullscreen map modal -->
-    <div id="mapFullscreenModal" class="fixed inset-0 bg-white z-[9999] hidden">
+    <div id="mapFullscreenModal" class="fixed inset-0 bg-white dark:bg-gray-900 z-[9999] hidden">
         <div class="absolute top-4 right-4 z-[1000] flex gap-2">
-            <button onclick="closeMapFullscreen()" class="p-2 bg-white shadow-lg rounded-full hover:bg-gray-100 transition">
+            <button onclick="closeMapFullscreen()" class="p-2 bg-white dark:bg-gray-800 shadow-lg rounded-full hover:bg-gray-100 dark:bg-gray-700 transition">
                 <i data-lucide="x" class="w-6 h-6"></i>
             </button>
         </div>
         <div id="fullscreenMap" class="w-full h-full"></div>
         <!-- Fullscreen POI Legend -->
         <div class="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-3">
-            <p class="text-xs text-gray-500 mb-2 font-medium">Commodités :</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">Commodités :</p>
             <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Transport</span>
                 <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Écoles</span>
@@ -190,21 +217,21 @@
                 <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-500"></span> Loisirs</span>
             </div>
         </div>
-        <div id="poiLoading" class="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg px-3 py-2 text-xs text-gray-500 hidden">
+        <div id="poiLoading" class="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg px-3 py-2 text-xs text-gray-500 dark:text-gray-400 hidden">
             <span class="animate-pulse">Chargement des commodités...</span>
         </div>
     </div>
     
     <!-- Results -->
-    <div class="bg-white rounded-xl shadow-sm p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-6">
         <div class="flex justify-between items-center mb-4">
             <div class="flex items-center gap-4">
-                <h2 class="text-lg font-semibold text-gray-900">Résultats</h2>
-                <span id="resultCount" class="text-sm text-gray-500"></span>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Résultats</h2>
+                <span id="resultCount" class="text-sm text-gray-500 dark:text-gray-400"></span>
             </div>
             <!-- Price level filter -->
             <div class="flex items-center gap-3 border-r pr-4">
-                <span class="text-sm text-gray-500">Prix/m² :</span>
+                <span class="text-sm text-gray-500 dark:text-gray-400">Prix/m² :</span>
                 <label class="flex items-center gap-1 cursor-pointer">
                     <input type="checkbox" id="filterCheap" checked class="w-4 h-4 text-green-600 rounded focus:ring-green-500">
                     <span class="flex items-center gap-1 text-xs text-green-600"><i data-lucide="trending-down" class="w-3 h-3"></i>Moins cher</span>
@@ -220,8 +247,8 @@
             </div>
             
             <div class="flex items-center gap-2">
-                <label class="text-sm text-gray-500">Trier par :</label>
-                <select id="sortSelect" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <label class="text-sm text-gray-500 dark:text-gray-400">Trier par :</label>
+                <select id="sortSelect" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                     <option value="">Pertinence</option>
                     <option value="price_asc">Prix croissant</option>
                     <option value="price_desc">Prix décroissant</option>
@@ -236,21 +263,24 @@
         </div>
         
         <div id="loading" class="hidden text-center py-8">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p class="mt-4 text-gray-500">Recherche en cours...</p>
+            <svg class="animate-spin h-12 w-12 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-4 text-gray-500 dark:text-gray-400">Recherche en cours...</p>
         </div>
         
         <div id="results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <p class="text-gray-500 col-span-full text-center py-8">Lancez une recherche pour voir les résultats</p>
+            <p class="text-gray-500 dark:text-gray-400 col-span-full text-center py-8">Lancez une recherche pour voir les résultats</p>
         </div>
         
         <!-- Pagination -->
         <div id="pagination" class="hidden flex justify-center items-center space-x-4 mt-6">
-            <button id="prevPage" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button id="prevPage" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 Précédent
             </button>
             <span id="pageInfo" class="text-sm text-gray-600"></span>
-            <button id="nextPage" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button id="nextPage" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 Suivant
             </button>
         </div>
@@ -419,6 +449,7 @@
         // Hide dropdown if query too short
         if (query.length < 2) {
             cityDropdown.classList.add('hidden');
+        citySearch.setAttribute('aria-expanded', 'false');
             return;
         }
         
@@ -439,6 +470,7 @@
     function displayCityDropdown(locations) {
         if (!locations || locations.length === 0) {
             cityDropdown.classList.add('hidden');
+        citySearch.setAttribute('aria-expanded', 'false');
             return;
         }
         
@@ -448,11 +480,12 @@
         
         if (filteredLocations.length === 0) {
             cityDropdown.classList.add('hidden');
+        citySearch.setAttribute('aria-expanded', 'false');
             return;
         }
         
         cityDropdown.innerHTML = filteredLocations.map(loc => `
-            <div class="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0" 
+            <div role="option" class="px-4 py-2 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-600 last:border-b-0" 
                  data-id="${loc['@id']}" 
                  data-name="${loc.displayName || loc.name}"
                  data-lat="${loc.latitude || ''}"
@@ -460,11 +493,12 @@
                  data-insee="${loc.insee || ''}"
                  onclick="addCity(this)">
                 <div class="font-medium">${loc.displayName || loc.name}</div>
-                <div class="text-sm text-gray-500">${loc.zipcode || ''}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">${loc.zipcode || ''}</div>
             </div>
         `).join('');
         
         cityDropdown.classList.remove('hidden');
+        citySearch.setAttribute('aria-expanded', 'true');
     }
     
     function addCity(element) {
@@ -479,6 +513,7 @@
         // Check if already selected
         if (selectedCities.some(c => c.id === city.id)) {
             cityDropdown.classList.add('hidden');
+        citySearch.setAttribute('aria-expanded', 'false');
             citySearch.value = '';
             return;
         }
@@ -487,6 +522,7 @@
         renderSelectedCities();
         citySearch.value = '';
         cityDropdown.classList.add('hidden');
+        citySearch.setAttribute('aria-expanded', 'false');
     }
     
     function removeCity(id) {
@@ -496,7 +532,7 @@
     
     function renderSelectedCities() {
         selectedCitiesContainer.innerHTML = selectedCities.map(city => `
-            <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+            <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm">
                 <i data-lucide="map-pin" class="w-3 h-3"></i>
                 ${city.name}
                 <button type="button" onclick="removeCity('${city.id}')" class="ml-1 hover:text-blue-600">
@@ -511,18 +547,30 @@
     document.addEventListener('click', function(e) {
         if (!citySearch.contains(e.target) && !cityDropdown.contains(e.target)) {
             cityDropdown.classList.add('hidden');
+        citySearch.setAttribute('aria-expanded', 'false');
+            citySearch.setAttribute('aria-expanded', 'false');
         }
         // Also hide property type dropdown
         const ptDropdown = document.getElementById('propertyTypeDropdown');
         const ptBtn = document.getElementById('propertyTypeBtn');
         if (!ptDropdown.contains(e.target) && !ptBtn.contains(e.target)) {
             ptDropdown.classList.add('hidden');
+            ptBtn.setAttribute('aria-expanded', 'false');
         }
     });
     
     // Property type multi-select
     function togglePropertyTypeDropdown() {
-        document.getElementById('propertyTypeDropdown').classList.toggle('hidden');
+        const dropdown = document.getElementById('propertyTypeDropdown');
+        const btn = document.getElementById('propertyTypeBtn');
+        const isHidden = dropdown.classList.contains('hidden');
+        if (isHidden) {
+            dropdown.classList.remove('hidden');
+            btn.setAttribute('aria-expanded', 'true');
+        } else {
+            dropdown.classList.add('hidden');
+            btn.setAttribute('aria-expanded', 'false');
+        }
     }
     
     function updatePropertyTypeLabel() {
@@ -770,11 +818,11 @@
         
         // < 0.85 = cheap (green), 0.85-1.15 = average (gray), > 1.15 = expensive (red)
         if (ratio < 0.85) {
-            return { color: 'text-green-500', bg: 'bg-green-100', label: '-' + Math.round((1 - ratio) * 100) + '%', icon: 'trending-down', level: 'cheap' };
+            return { color: 'text-green-500', bg: 'bg-green-100 dark:bg-green-900/30', label: '-' + Math.round((1 - ratio) * 100) + '%', icon: 'trending-down', level: 'cheap' };
         } else if (ratio > 1.15) {
-            return { color: 'text-red-500', bg: 'bg-red-100', label: '+' + Math.round((ratio - 1) * 100) + '%', icon: 'trending-up', level: 'expensive' };
+            return { color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30', label: '+' + Math.round((ratio - 1) * 100) + '%', icon: 'trending-up', level: 'expensive' };
         } else {
-            return { color: 'text-gray-500', bg: 'bg-gray-100', label: '≈', icon: 'minus', level: 'average' };
+            return { color: 'text-gray-500 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-700', label: '≈', icon: 'minus', level: 'average' };
         }
     }
     
@@ -817,7 +865,7 @@
         document.getElementById('resultCount').textContent = `${filteredProperties.length} / ${totalResults} résultat(s)`;
         
         if (!filteredProperties || filteredProperties.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">Aucun résultat trouvé avec ces filtres</p>';
+            container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 col-span-full text-center py-8">Aucun résultat trouvé avec ces filtres</p>';
             return;
         }
         
@@ -838,7 +886,7 @@
                     <div class="relative">
                         <img src="${picture}" alt="${prop.title || 'Bien immobilier'}" 
                              class="w-full h-48 object-cover" 
-                             onerror="this.src='https://via.placeholder.com/400x300?text=Pas+de+photo'">
+                             onerror="this.src='https://via.placeholder.com/400x300?text=Pas+de+photo'" loading="lazy" decoding="async">
                         <button onclick="event.preventDefault(); event.stopPropagation(); toggleFavorite('${uuid}', this)"
                                 class="favorite-btn absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:scale-110 transition ${isFavorite ? 'active' : ''}">
                             <i data-lucide="heart" class="w-5 h-5 ${isFavorite ? 'text-red-500' : 'text-gray-400'}"></i>
@@ -854,14 +902,14 @@
                         ${siteName ? `<span class="absolute top-3 left-3 px-2 py-1 bg-gray-800/80 text-white text-xs font-medium rounded">${siteName}</span>` : ''}
                     </div>
                     <div class="p-4">
-                        <h3 class="font-semibold text-gray-900 line-clamp-1 mb-2">${prop.title || 'Sans titre'}</h3>
+                        <h3 class="font-semibold text-gray-900 dark:text-white line-clamp-1 mb-2">${prop.title || 'Sans titre'}</h3>
                         <div class="flex items-center gap-2 mb-1">
                             <p class="text-blue-600 font-bold text-lg">${formatPrice(prop.price, prop.transactionType)}</p>
                             ${priceIndicator ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded ${priceIndicator.bg} ${priceIndicator.color} text-xs font-medium" title="vs moyenne commune"><i data-lucide="${priceIndicator.icon}" class="w-3 h-3"></i>${priceIndicator.label}</span>` : ''}
-                            ${prop.priceDrop ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded bg-orange-100 text-orange-600 text-xs font-medium" title="Baisse depuis la première vue"><i data-lucide="trending-down" class="w-3 h-3"></i>-${new Intl.NumberFormat('fr-FR').format(prop.priceDrop.amount)} €</span>` : ''}
+                            ${prop.priceDrop ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-medium" title="Baisse depuis la première vue"><i data-lucide="trending-down" class="w-3 h-3"></i>-${new Intl.NumberFormat('fr-FR').format(prop.priceDrop.amount)} €</span>` : ''}
                         </div>
-                        ${pricePerM2 ? `<p class="text-xs text-gray-500 mb-2">${new Intl.NumberFormat('fr-FR').format(Math.round(pricePerM2))} €/m²${prop.transactionType === 1 ? '/mois' : ''}</p>` : '<div class="mb-2"></div>'}
-                        <div class="flex items-center text-sm text-gray-500 mb-3">
+                        ${pricePerM2 ? `<p class="text-xs text-gray-500 dark:text-gray-400 mb-2">${new Intl.NumberFormat('fr-FR').format(Math.round(pricePerM2))} €/m²${prop.transactionType === 1 ? '/mois' : ''}</p>` : '<div class="mb-2"></div>'}
+                        <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-3">
                             <i data-lucide="map-pin" class="w-4 h-4 mr-1"></i>
                             <span>${city} ${zipcode}</span>
                         </div>
@@ -940,10 +988,10 @@
                 
                 const popupContent = `
                     <div class="min-w-[220px]">
-                        ${picture ? `<img src="${picture}" alt="" class="w-full h-24 object-cover rounded mb-2" onerror="this.style.display='none'">` : ''}
+                        ${picture ? `<img src="${picture}" alt="" class="w-full h-24 object-cover rounded mb-2" onerror="this.style.display='none'" loading="lazy" decoding="async">` : ''}
                         <strong class="line-clamp-1">${prop.title || 'Sans titre'}</strong>
                         <div class="text-blue-600 font-bold">${formatPrice(prop.price, prop.transactionType)}</div>
-                        <div class="text-gray-500 text-sm">${prop.city?.name || ''}</div>
+                        <div class="text-gray-500 dark:text-gray-400 text-sm">${prop.city?.name || ''}</div>
                         <a href="/property/${uuid}" class="text-blue-500 hover:underline text-sm">Voir le détail →</a>
                     </div>
                 `;
@@ -987,8 +1035,8 @@
         
         section.classList.remove('hidden');
         list.innerHTML = searches.map(s => `
-            <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2 group">
-                <button onclick="applySavedSearch(${s.id})" class="text-sm text-gray-700 hover:text-blue-600 mr-2">
+            <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 group">
+                <button onclick="applySavedSearch(${s.id})" class="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 mr-2">
                     ${s.name}
                 </button>
                 <button onclick="deleteSavedSearch(${s.id})" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
@@ -1133,10 +1181,10 @@
                     const marker = L.marker([lat, lon]).addTo(fullscreenMap);
                     const popupContent = `
                         <div class="min-w-[220px]">
-                            ${picture ? `<img src="${picture}" alt="" class="w-full h-24 object-cover rounded mb-2" onerror="this.style.display='none'">` : ''}
+                            ${picture ? `<img src="${picture}" alt="" class="w-full h-24 object-cover rounded mb-2" onerror="this.style.display='none'" loading="lazy" decoding="async">` : ''}
                             <strong class="line-clamp-1">${prop.title || 'Sans titre'}</strong>
                             <div class="text-blue-600 font-bold">${formatPrice(prop.price, prop.transactionType)}</div>
-                            <div class="text-gray-500 text-sm">${prop.city?.name || ''}</div>
+                            <div class="text-gray-500 dark:text-gray-400 text-sm">${prop.city?.name || ''}</div>
                         </div>
                     `;
                     marker.bindPopup(popupContent);
@@ -1167,7 +1215,13 @@
     
     // Close on Escape
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeMapFullscreen();
+        if (e.key === 'Escape') {
+            closeMapFullscreen();
+            document.getElementById('cityDropdown').classList.add('hidden');
+            document.getElementById('citySearch').setAttribute('aria-expanded', 'false');
+            document.getElementById('propertyTypeDropdown').classList.add('hidden');
+            document.getElementById('propertyTypeBtn').setAttribute('aria-expanded', 'false');
+        }
     });
     
     // POI configuration

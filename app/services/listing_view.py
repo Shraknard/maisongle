@@ -17,7 +17,11 @@ def _iso(dt) -> Optional[str]:
     return dt.isoformat() if dt else None
 
 
-def serialize_listing(listing: Listing, price_drop: Optional[dict] = None) -> dict:
+def serialize_listing(
+    listing: Listing,
+    price_drop: Optional[dict] = None,
+    duplicates: Optional[dict] = None,
+) -> dict:
     advert = {
         "url": listing.url,
         "site": listing.source,
@@ -62,6 +66,9 @@ def serialize_listing(listing: Listing, price_drop: Optional[dict] = None) -> di
         "updatedAt": _iso(listing.last_seen),
         "lastCrawledAt": _iso(listing.last_seen),
         "priceDrop": price_drop,
+        # When the same property was found on several sources, the others (+ the
+        # lowest price seen). None when this listing is unique.
+        "duplicates": duplicates,
     }
 
 

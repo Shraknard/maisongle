@@ -51,11 +51,39 @@ def geohash_encode(lat: Optional[float], lon: Optional[float], precision: int = 
     return "".join(out)
 
 
-def dedup_key(geohash: Optional[str], surface: Optional[float], room: Optional[int]) -> Optional[str]:
-    """Fuzzy clustering key: ~150 m cell + rounded surface + rooms."""
-    if not geohash:
+def dedup_key(
+    insee: Optional[str],
+    transaction_type: Optional[int],
+    property_type: Optional[int],
+    surface: Optional[float],
+    room: Optional[int],
+    price: Optional[float],
+) -> Optional[str]:
+    """Coordinate-independent fuzzy fingerprint clustering the same property
+    across sources.
+
+    Earlier this keyed on a ~150 m geohash cell, which meant the two sources that
+    carry no coordinates (PAP, SeLoger, and now notaires/ParuVendu) could never be
+    deduplicated, and geocoding them to a commune centroid would over-merge every
+    same-size flat in the commune. Instead we key on the stable attributes every
+    source exposes — commune (INSEE, already normalized to the parent city), sale
+    vs rent, property type, rounded surface, rooms and a coarse price bucket.
+
+    The price bucket (relative to the transaction) both tolerates small
+    cross-source price differences and — crucially for big communes where every
+    Paris/Lyon/Marseille arrondissement collapses to one INSEE — stops two
+    genuinely different flats of the same size/rooms from being merged unless they
+    also share a price.
+
+    Returns None (never clustered) when the core identity is too thin to trust.
+    """
+    if not insee or not surface:
         return None
-    gh = geohash[:7]
-    surf = int(round(surface)) if surface else 0
-    rooms = room or 0
-    return f"{gh}|{surf}|{rooms}"
+    surf = int(round(surface))
+    rooms = room if room is not None else 0
+    ptype = property_type if property_type is not None else -1
+    tx = transaction_type if transaction_type is not None else -1
+    # ~1.6 % tolerance on sales (5 k€ step), ~one bucket per 50 €/mo on rents.
+    step = 50 if tx == 1 else 5000
+    bucket = int(round(price / step)) if price else 0
+    return f"{insee}|{tx}|{ptype}|{surf}|{rooms}|{bucket}"

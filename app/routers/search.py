@@ -2,8 +2,8 @@ import logging
 import math
 from fastapi import APIRouter, Query, Depends
 from typing import Optional, List, Dict
-from sqlalchemy import func, nullslast
-from sqlalchemy.orm import Session
+from sqlalchemy import func, nullslast, select, cast, String
+from sqlalchemy.orm import Session, Query as OrmQuery
 
 from app.database import get_db
 from app.models import DVFCommune, LoyerCommune, Listing
@@ -56,6 +56,58 @@ def _within_radius(query, lat: float, lon: float, radius_km: float):
     )
     distance = 2 * EARTH_RADIUS_KM * func.asin(func.sqrt(a))
     return query.filter(distance <= radius_km)
+
+
+def _representative_ids(base: OrmQuery):
+    """One listing id per dedup cluster from the filtered ``base`` query.
+
+    Uses ROW_NUMBER over the dedup_key, coalescing a null key with the row id so
+    coordinate-less rows that couldn't be fingerprinted are never merged together.
+    The representative is the row with coordinates (for the map), then the cheapest.
+    """
+    partition = func.coalesce(Listing.dedup_key, cast(Listing.id, String))
+    rank = func.row_number().over(
+        partition_by=partition,
+        order_by=(
+            Listing.latitude.is_(None),          # coordinates first (False < True)
+            nullslast(Listing.price.asc()),      # cheapest as the representative
+            Listing.id.asc(),
+        ),
+    ).label("rn")
+    ranked = base.with_entities(Listing.id.label("id"), rank).subquery()
+    return select(ranked.c.id).where(ranked.c.rn == 1)
+
+
+def _duplicate_sources(base: OrmQuery, listings: list) -> Dict[str, dict]:
+    """For each shown listing, the set of sources carrying the same property.
+
+    Aggregates over the *pre-dedup* filtered set (so it sees every source), keyed
+    by dedup_key and restricted to the current page's keys — a light query that
+    lets the UI show "aussi sur Leboncoin, SeLoger" and the lowest price.
+    """
+    keys = [l.dedup_key for l in listings if l.dedup_key]
+    if not keys:
+        return {}
+    rows = (
+        base.with_entities(Listing.dedup_key, Listing.source, Listing.price)
+        .filter(Listing.dedup_key.in_(keys))
+        .all()
+    )
+    agg: Dict[str, dict] = {}
+    for key, source, price in rows:
+        entry = agg.setdefault(key, {"sources": set(), "min_price": None})
+        entry["sources"].add(source)
+        if price is not None and (entry["min_price"] is None or price < entry["min_price"]):
+            entry["min_price"] = price
+    return {
+        key: {
+            "sources": sorted(entry["sources"]),
+            "count": len(entry["sources"]),
+            "minPrice": entry["min_price"],
+        }
+        for key, entry in agg.items()
+        if len(entry["sources"]) > 1
+    }
 
 
 @router.get("/locations")
@@ -142,35 +194,40 @@ async def search_listings(
     if not is_radius and not insee_list and not department:
         return {"total": 0, "page": page, "properties": [], "refresh": refresh_info}
 
-    query = db.query(Listing).filter(
+    base = db.query(Listing).filter(
         Listing.active.is_(True),
         Listing.transaction_type == transaction_type,
     )
     if is_radius:
-        query = _within_radius(query, lat, lon, float(radius))
+        base = _within_radius(base, lat, lon, float(radius))
     elif insee_list:
-        query = query.filter(Listing.city_insee.in_(insee_list))
+        base = base.filter(Listing.city_insee.in_(insee_list))
     elif department:
-        query = query.filter(Listing.department_code == department)
+        base = base.filter(Listing.department_code == department)
 
     if property_types:
-        query = query.filter(Listing.property_type.in_(property_types))
+        base = base.filter(Listing.property_type.in_(property_types))
     if budget_min is not None:
-        query = query.filter(Listing.price >= budget_min)
+        base = base.filter(Listing.price >= budget_min)
     if budget_max is not None:
-        query = query.filter(Listing.price <= budget_max)
+        base = base.filter(Listing.price <= budget_max)
     if surface_min is not None:
-        query = query.filter(Listing.surface >= surface_min)
+        base = base.filter(Listing.surface >= surface_min)
     if surface_max is not None:
-        query = query.filter(Listing.surface <= surface_max)
+        base = base.filter(Listing.surface <= surface_max)
     if room_min is not None:
-        query = query.filter(Listing.room >= room_min)
+        base = base.filter(Listing.room >= room_min)
     if room_max is not None:
-        query = query.filter(Listing.room <= room_max)
+        base = base.filter(Listing.room <= room_max)
     if bedroom_min is not None:
-        query = query.filter(Listing.bedroom >= bedroom_min)
+        base = base.filter(Listing.bedroom >= bedroom_min)
     if bedroom_max is not None:
-        query = query.filter(Listing.bedroom <= bedroom_max)
+        base = base.filter(Listing.bedroom <= bedroom_max)
+
+    # Collapse the same property listed on several sources: keep one
+    # representative per dedup cluster (prefer one carrying coordinates, then the
+    # cheapest), while rows without a dedup_key are each their own cluster.
+    query = db.query(Listing).filter(Listing.id.in_(_representative_ids(base)))
 
     sort_col = _SORT_COLUMNS.get(sort_by, Listing.first_seen)
     direction = sort_col.asc() if sort_order == "asc" else sort_col.desc()
@@ -180,7 +237,11 @@ async def search_listings(
     listings = query.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
 
     drops = price_drops(db, [listing.id for listing in listings])
-    properties = [serialize_listing(listing, drops.get(listing.id)) for listing in listings]
+    dups = _duplicate_sources(base, listings)
+    properties = [
+        serialize_listing(listing, drops.get(listing.id), dups.get(listing.dedup_key))
+        for listing in listings
+    ]
 
     return {"total": total, "page": page, "properties": properties, "refresh": refresh_info}
 

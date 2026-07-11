@@ -48,12 +48,42 @@ class Settings(BaseSettings):
     # server-rendered HTML. Flip to true only if results come back empty/blocked.
     seloger_render_js: bool = False
 
+    # SeLoger — see above. Logic-Immo shares the same AVIV/DataDome stack, so it
+    # reuses this Scrapfly transport (see below).
+
+    # Logic-Immo (AVIV group, DataDome-protected HTML). Disabled by default; same
+    # transports as SeLoger/Leboncoin (scrapfly recommended / cookie fallback).
+    # Like SeLoger, its cards carry no coordinates → no map marker, tagged with the
+    # searched commune's INSEE, excluded from radius search. SCAFFOLDING: the
+    # embedded-JSON contract is modelled on SeLoger's and must be validated live
+    # before enabling (it spends Scrapfly credits per (commune, type) when on).
+    logicimmo_enabled: bool = False
+    logicimmo_transport: str = "scrapfly"  # "scrapfly" | "cookie"
+    logicimmo_datadome: str = ""
+    logicimmo_user_agent: str = _DEFAULT_USER_AGENT
+    logicimmo_render_js: bool = False
+
+    # ParuVendu (open HTML, no anti-bot — validated live). Free like Bien'ici/PAP,
+    # so enabled by default; no coordinates → no map marker, tagged with the
+    # searched commune's INSEE, excluded from radius search.
+    paruvendu_enabled: bool = True
+
+    # immobilier.notaires.fr (open JSON API, no anti-bot — validated live). Free
+    # like Bien'ici/PAP, enabled by default. Unique inventory (notary sales,
+    # auctions/immo-interactif). No coordinates → no map marker / no radius; tagged
+    # with the annonce's real INSEE commune.
+    notaires_enabled: bool = True
+
     # Scrapfly Web Unlocker (shared by any DataDome source). Get a key at
     # scrapfly.io; residential pool + asp clears DataDome for ~cents at this
     # throttled volume.
     scrapfly_api_key: str = ""
     scrapfly_country: str = "fr"
     scrapfly_proxy_pool: str = "public_residential_pool"
+    # Hard per-source-per-run credit cap (0 = unlimited). A safety valve so adding
+    # DataDome sources can't run up an unbounded Scrapfly bill; the transport stops
+    # returning results for a source once it spends this many credits in a run.
+    scrapfly_max_credits_per_run: int = 0
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),

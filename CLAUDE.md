@@ -28,14 +28,21 @@ app/
     base.py            # BaseScraper, SearchCriteria, NormalizedListing, Commune
     bienici.py         # Bien'ici (JSON ouvert, httpx)
     pap.py             # PAP / Particulier à Particulier (HTML selectolax, curl_cffi/Cloudflare)
+    notaires.py        # immobilier.notaires.fr (API JSON ouverte, httpx ; ventes notariales)
+    paruvendu.py       # ParuVendu (HTML selectolax + curl_cffi ; pas d'anti-bot)
     leboncoin.py       # Leboncoin (API JSON finder/search ; DataDome via transport)
     seloger.py         # SeLoger (HTML selectolax-free ; blob JSON embarqué ; DataDome via transport)
+    logicimmo.py       # Logic-Immo (échafaudage HTML DataDome/AVIV ; à valider en live)
     transport.py       # Transports anti-bot pluggables (post_json/get_text ; Scrapfly / cookie injecté)
     registry.py        # Enregistrement des scrapers actifs
   services/            # Logique métier
-    scrape.py          # Refresh throttlé (5 min/périmètre), upsert + historique de prix
+    scrape.py          # Refresh throttlé (5 min/périmètre), sources scrapées en parallèle
+                       #   (asyncio.gather), upsert + historique de prix, désactivation des
+                       #   annonces non revues depuis 14 j (_deactivate_stale)
     geo.py             # Autocomplétion communes + résolution INSEE via geo.api.gouv.fr
-    dedup.py           # Géohash + clé de déduplication inter-sources
+    dedup.py           # Clé de déduplication inter-sources indépendante des coordonnées
+                       #   (insee|transaction|type|surface|pièces|tranche de prix) — appliquée
+                       #   en lecture (routers/search) pour collapser les doublons multi-sources
     listing_view.py    # Sérialisation Listing -> shape attendue par les templates
     enrichment.py      # Orchestration enrichissement (zonage + géorisques)
     georisques.py      # Client API Géorisques (risques naturels/technologiques)
@@ -89,6 +96,24 @@ SELOGER_TRANSPORT=scrapfly             # "scrapfly" | "cookie"
 # SELOGER_RENDER_JS=false              # true seulement si retours vides (DataDome non franchi)
 # SELOGER_DATADOME=                    # transport "cookie" (fallback manuel)
 # SELOGER_USER_AGENT=
+
+# Logic-Immo (optionnel, DataDome/AVIV, HTML) — ÉCHAFAUDAGE désactivé par défaut. Même
+# transport partagé (SCRAPFLY_API_KEY). Le contrat d'extraction est calqué sur SeLoger et
+# reste à valider en live (DataDome bloque toute reconnaissance depuis une IP datacenter).
+LOGICIMMO_ENABLED=false
+LOGICIMMO_TRANSPORT=scrapfly           # "scrapfly" | "cookie"
+# LOGICIMMO_RENDER_JS=false
+# LOGICIMMO_DATADOME=                   # transport "cookie" (fallback manuel)
+# LOGICIMMO_USER_AGENT=
+
+# ParuVendu et immobilier.notaires.fr (gratuits, sans anti-bot) sont ACTIFS par défaut
+# (comme Bien'ici/PAP) ; désactivables via PARUVENDU_ENABLED / NOTAIRES_ENABLED.
+# PARUVENDU_ENABLED=true
+# NOTAIRES_ENABLED=true
+
+# Garde-fou de coût Scrapfly : plafond de crédits par source et par run (0 = illimité).
+# La source arrête de renvoyer des résultats une fois le plafond atteint.
+# SCRAPFLY_MAX_CREDITS_PER_RUN=0
 ```
 
 ## Conventions
@@ -111,8 +136,25 @@ complète et l'avancement. En résumé :
   la 1ʳᵉ fois (Leboncoin jusqu'à 100 pages = plafond LBC ~3500 ; Bien'ici jusqu'à 24 = 2400), puis seulement
   les pages les plus récentes (5) aux refresh. La pagination s'arrête au total réel → une recherche filtrée
   backfille entièrement à bas coût. Leboncoin plafonne à 3500/requête : couverture plus large = filtres plus fins.
-- Sources actives : **Bien'ici** (JSON, httpx) et **PAP** (HTML selectolax + curl_cffi pour passer
-  Cloudflare). Les annonces PAP n'ont pas de coordonnées (pas de marqueur carte).
+- **Déduplication inter-sources appliquée en lecture** (`routers/search`) : les annonces partageant
+  une `dedup_key` (clé indépendante des coordonnées : `insee|transaction|type|surface|pièces|tranche de
+  prix`) sont collapsées en un représentant (préférence : celui qui porte des coordonnées, puis le moins
+  cher) ; les autres sources sont exposées dans `duplicates` (+ prix le plus bas). Empêche le flood de
+  doublons quand on multiplie les sources.
+- **Cycle de vie `active`** : `_deactivate_stale` (dans `scrape._run`) désactive les annonces non revues
+  depuis 14 j (vendues/louées/retirées) ; re-scrapées, elles se réactivent (self-healing). Fenêtre large
+  car les sources plafonnées (SeLoger 30/type, caps de pagination) ne renvoient pas tout leur catalogue.
+- **Sources scrapées en parallèle** par `_run` (`asyncio.gather`) ; les upserts DB restent séquentiels.
+  Garde-fou de coût Scrapfly par source/run (`scrapfly_max_credits_per_run`).
+- Sources actives (gratuites, sans clé) : **Bien'ici** (JSON, httpx), **PAP** (HTML selectolax + curl_cffi/
+  Cloudflare), **immobilier.notaires.fr** (API JSON ouverte — ventes notariales, inventaire unique) et
+  **ParuVendu** (HTML, sans anti-bot, validé en live). PAP/notaires/ParuVendu n'ont pas de coordonnées
+  (pas de marqueur carte, exclus du rayon, INSEE = commune cherchée).
+  - *notaires* : filtre API `departement` (l'API ignore typeTransaction/typeBien → filtrés en lecture) ;
+    on pagine le département (petits volumes) et on garde les annonces dont l'`inseeCommune` correspond.
+  - *ParuVendu* : URL tous types `/immobilier/{vente|location}/{ville}/` (1 requête/commune, pagination
+    `?p=N`) ; forme `{slug}-{cp}` (désambiguïse) puis `{slug}` nu en fallback (les grandes villes 404 sur
+    la forme cp). Prix lu sur le div feuille (le texte concaténé est pollué par le compteur de photos).
 - Source optionnelle : **Leboncoin** (API JSON `finder/search`, **validée en live**). Protégée par DataDome
   → franchie via un **transport pluggable** (`scrapers/transport.py`) : `scrapfly` (Web Unlocker, IP
   résidentielle + ASP, recommandé) ou `cookie` (datadome collé à la main, fallback). No-op tant qu'aucun
@@ -153,3 +195,12 @@ complète et l'avancement. En résumé :
   chaque recherche, comme Leboncoin. Limite connue : **30 annonces/(commune, type)** (le SERP est une SPA, la
   pagination HTML n'existe plus ; les pages suivantes passeraient par l'API interne `classified-search`, non
   implémentée). Surveiller le coût/crédits si activé.
+- **Logic-Immo** : **ÉCHAFAUDAGE** (`LOGICIMMO_ENABLED=false`). Transport/config/URL en place et réutilisent
+  le transport Scrapfly partagé ; le contrat d'extraction (`extract_next_data`/`_listings_from`/`_normalize`)
+  est **calqué sur SeLoger et à valider en live** — DataDome (AVIV) renvoie 403 + captcha depuis une IP
+  datacenter, donc la reconnaissance n'a pas pu confirmer le chemin JSON ni le slug d'URL. À activer/valider
+  avec une clé Scrapfly (comme SeLoger l'a été).
+- **notaires.fr / ParuVendu** : validés en live et **actifs par défaut** (gratuits). Dédup inter-sources : la
+  clé (indépendante des coordonnées) peut sur-fusionner deux biens réellement distincts de même
+  commune/type/surface/pièces/tranche-de-prix dans les grandes villes mono-INSEE (Paris/Lyon/Marseille) —
+  taux constaté ~1,4 % ; affiner la clé (étage, géohash pour les sources à coordonnées) si gênant.

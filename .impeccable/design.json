@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-11T12:00:00Z",
+  "title": "Design System: Maisongle",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Blue 600", "canonical": "#2563eb", "tonalRamp": ["#eff6ff", "#dbeafe", "#bfdbfe", "#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1d4ed8"] },
+      "success": { "role": "secondary", "displayName": "Green 600", "canonical": "#16a34a", "tonalRamp": ["#f0fdf4", "#dcfce7", "#bbf7d0", "#86efac", "#4ade80", "#22c55e", "#16a34a", "#15803d"] },
+      "danger": { "role": "secondary", "displayName": "Red 500", "canonical": "#ef4444", "tonalRamp": ["#fef2f2", "#fee2e2", "#fecaca", "#fca5a5", "#f87171", "#ef4444", "#dc2626", "#b91c1c"] },
+      "warning": { "role": "secondary", "displayName": "Yellow 500", "canonical": "#eab308", "tonalRamp": ["#fefce8", "#fef9c3", "#fef08a", "#fde047", "#facc15", "#eab308", "#ca8a04", "#a16207"] },
+      "surface": { "role": "neutral", "displayName": "White", "canonical": "#ffffff", "tonalRamp": ["#ffffff", "#f9fafb", "#f3f4f6", "#e5e7eb", "#d1d5db", "#9ca3af", "#6b7280", "#4b5563"] },
+      "background": { "role": "neutral", "displayName": "Gray 50", "canonical": "#f9fafb", "tonalRamp": ["#ffffff", "#f9fafb", "#f3f4f6", "#e5e7eb", "#d1d5db", "#9ca3af", "#6b7280", "#4b5563"] },
+      "text-primary": { "role": "neutral", "displayName": "Gray 900", "canonical": "#111827", "tonalRamp": ["#ffffff", "#f9fafb", "#f3f4f6", "#e5e7eb", "#d1d5db", "#9ca3af", "#6b7280", "#4b5563"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero headlines only." },
+      "body": { "displayName": "Body", "purpose": "Standard reading text." }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)", "purpose": "Base card shadow" },
+      { "name": "shadow-md", "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", "purpose": "Floating icons/buttons" },
+      { "name": "shadow-lg", "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", "purpose": "Hovered cards, modals" }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default Tailwind easing" }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Used for main actions.",
+      "html": "<button class=\"ds-btn-primary\">Rechercher</button>",
+      "css": ".ds-btn-primary { background-color: #2563eb; color: #ffffff; padding: 0.5rem 1.5rem; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; border: none; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1); display: inline-flex; align-items: center; justify-content: center; } .ds-btn-primary:hover { background-color: #1d4ed8; }"
+    },
+    {
+      "name": "Success Button",
+      "kind": "button",
+      "refersTo": "button-success",
+      "description": "Used for positive actions like save.",
+      "html": "<button class=\"ds-btn-success\">Sauvegarder</button>",
+      "css": ".ds-btn-success { background-color: #16a34a; color: #ffffff; padding: 0.5rem 1.5rem; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; border: none; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1); display: inline-flex; align-items: center; justify-content: center; } .ds-btn-success:hover { background-color: #15803d; }"
+    },
+    {
+      "name": "Property Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Standard container for a property listing.",
+      "html": "<div class=\"ds-card\"><img src=\"https://via.placeholder.com/400x300\" class=\"ds-card-img\"><div class=\"ds-card-body\"><h3 class=\"ds-card-title\">Bel Appartement</h3><p class=\"ds-card-price\">250 000 €</p></div></div>",
+      "css": ".ds-card { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.75rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); overflow: hidden; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-family: ui-sans-serif, system-ui, sans-serif; } .ds-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); } .ds-card-img { width: 100%; height: 12rem; object-fit: cover; } .ds-card-body { padding: 1rem; } .ds-card-title { margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 600; color: #111827; } .ds-card-price { margin: 0; font-size: 1.125rem; font-weight: 700; color: #2563eb; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard form input.",
+      "html": "<input type=\"text\" class=\"ds-input\" placeholder=\"Tapez une ville...\">",
+      "css": ".ds-input { background-color: #ffffff; color: #111827; padding: 0.5rem 0.75rem; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; border: 1px solid #d1d5db; border-radius: 0.5rem; width: 100%; box-sizing: border-box; outline: none; transition: box-shadow 0.15s, border-color 0.15s; } .ds-input:focus { border-color: transparent; box-shadow: 0 0 0 2px #3b82f6; }"
+    },
+    {
+      "name": "Semantic Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Used to show status or indicator.",
+      "html": "<span class=\"ds-badge-green\">-15% vs moyenne</span>",
+      "css": ".ds-badge-green { background-color: #dcfce7; color: #16a34a; padding: 0.125rem 0.5rem; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; border-radius: 0.25rem; display: inline-flex; align-items: center; justify-content: center; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Analyst's Workbench",
+    "overview": "Maisongle is a strictly functional, data-dense command center built for real estate analysis. It aggregates listings and enriches them with vital third-party data without the clutter of mainstream portals. The aesthetic is clean, modern, and utilitarian: structural shadows organize the information hierarchy, while crisp boundaries keep the data focused and legible. The design explicitly rejects fragmented layouts, ad-heavy interfaces, and artificially limited experiences.",
+    "keyCharacteristics": [
+      "Density with Clarity: High information density balanced by strict structural boundaries.",
+      "Data First: The listing and its enriched context are the heroes; everything else is out of the way.",
+      "Structural Layers: Shadows group related information and elevate interactive elements over the base gray canvas."
+    ],
+    "rules": [
+      { "name": "The Functional Color Rule", "body": "Color is reserved strictly for interaction and semantic meaning (good/bad/warning). It is never used purely for decoration.", "section": "colors" },
+      { "name": "The Contrast Rule", "body": "All secondary data points (Gray 500) must maintain strict contrast against the white cards to remain legible during rapid scanning.", "section": "typography" },
+      { "name": "The Structural Shadow Rule", "body": "Shadows define layers, not just decoration. A shadow indicates a distinct grouping of information or an interactive surface.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use `bg-white` inside `shadow-sm` containers to group information logically on the `bg-gray-50` background.",
+      "Do rely on Tailwind's system fonts to keep the application feeling like a native utility.",
+      "Do ensure interactive elements (cards, buttons) have clear hover states (color shifts or elevation)."
+    ],
+    "donts": [
+      "Don't use fragmented layouts or infinite scrolling patterns typical of mainstream portals.",
+      "Don't use decorative colors; every color shift should signify an interaction or data state.",
+      "Don't use gradient text or glassmorphism.",
+      "Don't animate images on hover (`.group:hover .group-hover:scale` on `<img>` elements)."
+    ]
+  }
+}
