@@ -4,9 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Maisongle{% endblock %}</title>
-    
+
+    <!-- Theme: applied before first paint to avoid a flash of the wrong mode -->
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('theme');
+                var isDark = stored
+                    ? stored === 'dark'
+                    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.classList.toggle('dark', isDark);
+            } catch (e) { /* localStorage unavailable — stay light */ }
+        })();
+    </script>
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' };</script>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -15,9 +29,22 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
     <style>
+        html { color-scheme: light; }
+        html.dark { color-scheme: dark; }
+
+        /* Smooth surface/text swap when toggling theme (respects reduced motion) */
+        @media (prefers-reduced-motion: no-preference) {
+            body, nav, main, .property-card, .theme-surface {
+                transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+            }
+        }
+
         .property-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        }
+        .dark .property-card:hover {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
         }
         .favorite-btn.active svg {
             fill: #ef4444;
@@ -30,16 +57,17 @@
             margin: 8px 12px;
         }
 
-        /* Override Tailwind Typography grey */
-        .prose, .prose * {
-            color: black !important;
-        }
-        @media (prefers-color-scheme: dark) {
-            .dark .prose, .dark .prose * {
-                color: white !important;
-            }
-        }
+        /* Prose base text colour, driven by the .dark class (manual toggle).
+           Wrapper-only so unstyled text inherits while explicit colour
+           utilities (badges, headings) keep winning. */
+        .prose { color: #111827; }
+        .dark .prose { color: #e5e7eb; }
 
+        /* Leaflet popups in dark mode */
+        .dark .leaflet-popup-content-wrapper,
+        .dark .leaflet-popup-tip { background: #1f2937; color: #f9fafb; }
+        .dark .leaflet-popup-content-wrapper a.leaflet-popup-close-button { color: #9ca3af; }
+        .dark .leaflet-popup-content .text-black { color: #f9fafb; }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -71,6 +99,11 @@
                         <i data-lucide="book-open" class="w-5 h-5"></i>
                         <span>Doc</span>
                     </a>
+                    <button type="button" id="themeToggle" onclick="toggleTheme()" aria-label="Changer de thème" title="Changer de thème"
+                            class="ml-2 flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition">
+                        <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+                        <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -87,7 +120,22 @@
     <script>
         // Initialize Lucide icons
         lucide.createIcons();
-        
+
+        // Theme toggle (light <-> dark), persisted in localStorage
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch (e) {}
+        }
+
+        // Follow the OS preference on later visits only while the user hasn't chosen
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('theme')) {
+                    document.documentElement.classList.toggle('dark', e.matches);
+                }
+            });
+        }
+
         // Property type labels
         const PROPERTY_TYPES = {
             0: 'Appartement',
@@ -164,3 +212,23 @@
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
+.marker-park { background-color: #a855f7; }
+.marker-playground { background-color: #a855f7; }
+.marker-sports_centre { background-color: #a855f7; }
+.marker-fitness_centre { background-color: #a855f7; }
+.marker-cinema { background-color: #a855f7; }
+.marker-restaurant { background-color: #a855f7; }
+.dpe-a { background-color: #319834; }
+.dpe-b { background-color: #33cc31; }
+.dpe-c { background-color: #cbfc34; }
+.dpe-d { background-color: #fbfe06; }
+.dpe-e { background-color: #fbcc05; }
+.dpe-f { background-color: #fc9935; }
+.dpe-g { background-color: #fc0205; }
+.ges-a { background-color: #f2e6f7; }
+.ges-b { background-color: #dfc1f2; }
+.ges-c { background-color: #d5a5ee; }
+.ges-d { background-color: #c989e9; }
+.ges-e { background-color: #bc6de3; }
+.ges-f { background-color: #a94ad8; }
+.ges-g { background-color: #8b24c4; }

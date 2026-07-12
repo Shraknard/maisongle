@@ -13,13 +13,13 @@
 
 {% block content %}
 <div id="loading" class="text-center py-12">
-    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-    <p class="mt-4 text-black">Chargement...</p>
+    <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+    <p class="mt-4 text-black dark:text-white">Chargement...</p>
 </div>
 
 <div id="propertyContent" class="hidden space-y-6">
     <!-- Back button -->
-    <a href="javascript:history.back()" class="inline-flex items-center text-black hover:text-blue-600 transition">
+    <a href="javascript:history.back()" class="inline-flex items-center text-black dark:text-white hover:text-blue-600 transition">
         <i data-lucide="arrow-left" class="w-5 h-5 mr-2"></i>
         Retour
     </a>
@@ -48,7 +48,7 @@
                     
                     <!-- Favorite button -->
                     <button id="favoriteBtn" onclick="togglePropertyFavorite()" 
-                            class="absolute top-4 right-4 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:scale-110 transition text-black dark:text-white">
+                            class="absolute top-4 right-4 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:scale-110 transition text-black dark:text-white dark:text-white">
                         <i data-lucide="heart" class="w-6 h-6"></i>
                     </button>
                     
@@ -63,13 +63,13 @@
             
             <!-- Description -->
             <div class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-6">
-                <h2 class="text-xl font-bold text-black dark:text-white mb-4">Description</h2>
-                <p id="description" class="text-black dark:text-white whitespace-pre-line"></p>
+                <h2 class="text-xl font-bold text-black dark:text-white dark:text-white mb-4">Description</h2>
+                <p id="description" class="text-black dark:text-white dark:text-white whitespace-pre-line"></p>
             </div>
             
             <!-- Features -->
             <div id="featuresSection" class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-6 hidden">
-                <h2 class="text-xl font-bold text-black dark:text-white mb-4">Caractéristiques</h2>
+                <h2 class="text-xl font-bold text-black dark:text-white dark:text-white mb-4">Caractéristiques</h2>
                 <div id="features" class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 </div>
             </div>
@@ -77,8 +77,8 @@
             <!-- Map -->
             <div class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-4">
                 <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-lg font-bold text-black dark:text-white">Localisation & Commodités</h2>
-                    <button onclick="openMapFullscreen()" class="flex items-center gap-1 text-sm text-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition">
+                    <h2 class="text-lg font-bold text-black dark:text-white dark:text-white">Localisation & Commodités</h2>
+                    <button onclick="openMapFullscreen()" class="flex items-center gap-1 text-sm text-black dark:text-white dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition">
                         <i data-lucide="maximize-2" class="w-4 h-4"></i>
                         <span>Agrandir</span>
                     </button>
@@ -86,8 +86,8 @@
                 <div id="map"></div>
                 <!-- POI Legend -->
                 <div id="poiLegend" class="mt-3 hidden">
-                    <p class="text-xs text-black dark:text-white mb-2">Commodités dans un rayon de 500m :</p>
-                    <div class="flex flex-wrap gap-2 text-xs text-black dark:text-white">
+                    <p class="text-xs text-black dark:text-white dark:text-white mb-2">Commodités dans un rayon de 500m :</p>
+                    <div class="flex flex-wrap gap-2 text-xs text-black dark:text-white dark:text-white">
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Transport</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Écoles</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> Commerces</span>
@@ -95,7 +95,7 @@
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-500"></span> Loisirs</span>
                     </div>
                 </div>
-                <div id="poiLoading" class="mt-2 text-xs text-black hidden">
+                <div id="poiLoading" class="mt-2 text-xs text-black dark:text-white hidden">
                     <span class="animate-pulse">Chargement des commodités...</span>
                 </div>
             </div>
@@ -105,10 +105,10 @@
         <div class="space-y-6">
             <!-- Price and main info -->
             <div class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-6">
-                <h1 id="title" class="text-2xl font-bold text-black dark:text-white mb-2"></h1>
+                <h1 id="title" class="text-2xl font-bold text-black dark:text-white dark:text-white mb-2"></h1>
                 <p id="price" class="text-3xl font-bold text-blue-600 mb-4"></p>
                 
-                <div class="flex items-center text-black dark:text-white mb-4">
+                <div class="flex items-center text-black dark:text-white dark:text-white mb-4">
                     <i data-lucide="map-pin" class="w-5 h-5 mr-2"></i>
                     <span id="location"></span>
                 </div>
@@ -117,22 +117,22 @@
                 </div>
                 
                 <!-- Dates -->
-                <div id="datesSection" class="mt-3 flex flex-wrap gap-4 text-sm text-black dark:text-white">
+                <div id="datesSection" class="mt-3 flex flex-wrap gap-4 text-sm text-black dark:text-white dark:text-white">
                 </div>
                 
                 <!-- Energy DPE/GES -->
                 <div id="energySection" class="mt-4 hidden">
-                    <h3 class="font-semibold text-black dark:text-white mb-3">Diagnostics énergétiques</h3>
+                    <h3 class="font-semibold text-black dark:text-white dark:text-white mb-3">Diagnostics énergétiques</h3>
                     <div class="grid grid-cols-2 gap-4">
                         <!-- DPE Gauge -->
                         <div>
-                            <p class="text-xs text-black dark:text-white mb-2 text-center">Consommation énergétique (DPE)</p>
+                            <p class="text-xs text-black dark:text-white dark:text-white mb-2 text-center">Consommation énergétique (DPE)</p>
                             <div id="dpeGauge" class="space-y-1">
                             </div>
                         </div>
                         <!-- GES Gauge -->
                         <div>
-                            <p class="text-xs text-black dark:text-white mb-2 text-center">Émissions de gaz (GES)</p>
+                            <p class="text-xs text-black dark:text-white dark:text-white mb-2 text-center">Émissions de gaz (GES)</p>
                             <div id="gesGauge" class="space-y-1">
                             </div>
                         </div>
@@ -144,22 +144,22 @@
             
             <!-- Zonage ABC -->
             <div id="zonageSection" class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-6 hidden">
-                <h2 class="text-lg font-bold text-black dark:text-white mb-3">Zonage Pinel</h2>
+                <h2 class="text-lg font-bold text-black dark:text-white dark:text-white mb-3">Zonage Pinel</h2>
                 <div id="zonageContent" class="text-center">
                 </div>
             </div>
             
             <!-- Georisques -->
             <div id="georisquesSection" class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-6 hidden">
-                <h2 class="text-lg font-bold text-black dark:text-white mb-3">Risques naturels et technologiques</h2>
+                <h2 class="text-lg font-bold text-black dark:text-white dark:text-white mb-3">Risques naturels et technologiques</h2>
                 <div id="georisquesContent" class="space-y-3">
                 </div>
             </div>
             
             <!-- Contact -->
             <div class="bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-6">
-                <h2 class="text-lg font-bold text-black dark:text-white mb-4">Contact</h2>
-                <div id="contactInfo" class="space-y-3 text-black dark:text-white">
+                <h2 class="text-lg font-bold text-black dark:text-white dark:text-white mb-4">Contact</h2>
+                <div id="contactInfo" class="space-y-3 text-black dark:text-white dark:text-white">
                 </div>
                 <a id="originalUrl" href="#" target="_blank" 
                    class="mt-4 block w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-center">
@@ -179,8 +179,8 @@
     <div id="bdmvSection" class="hidden bg-white dark:bg-gray-800 rounded-xl dark:border-gray-700 shadow-sm p-6">
         <div class="flex items-start justify-between flex-wrap gap-3 mb-5">
             <div>
-                <h2 class="text-xl font-bold text-black dark:text-white">La commune <span id="bdmvCityName"></span></h2>
-                <p class="text-sm text-black dark:text-black">Profil de la population et de la délinquance</p>
+                <h2 class="text-xl font-bold text-black dark:text-white dark:text-white">La commune <span id="bdmvCityName"></span></h2>
+                <p class="text-sm text-black dark:text-white dark:text-black dark:text-white">Profil de la population et de la délinquance</p>
             </div>
             <a id="bdmvLink" href="#" target="_blank" rel="noopener"
                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition">
@@ -190,25 +190,25 @@
         </div>
 
         <!-- Statistiques sur la population -->
-        <h3 class="text-sm font-semibold uppercase tracking-wide text-black dark:text-black mb-3">Statistiques sur la population</h3>
+        <h3 class="text-sm font-semibold uppercase tracking-wide text-black dark:text-white dark:text-black dark:text-white mb-3">Statistiques sur la population</h3>
         <div id="bdmvStats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8"></div>
 
         <!-- Graphiques -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div id="bdmvPopBlock" class="hidden">
-                <h3 class="text-base font-semibold text-black dark:text-white mb-1">Évolution du nombre d'habitants</h3>
-                <p id="bdmvPopCaption" class="text-xs text-black dark:text-black mb-2"></p>
-                <div id="bdmvPopChart" class="text-black dark:text-black"></div>
+                <h3 class="text-base font-semibold text-black dark:text-white dark:text-white mb-1">Évolution du nombre d'habitants</h3>
+                <p id="bdmvPopCaption" class="text-xs text-black dark:text-white dark:text-black dark:text-white mb-2"></p>
+                <div id="bdmvPopChart" class="text-black dark:text-white dark:text-black dark:text-white"></div>
             </div>
             <div id="bdmvCrimeBlock" class="hidden">
-                <h3 class="text-base font-semibold text-black dark:text-white mb-1">Évolution du nombre d'infractions</h3>
-                <p id="bdmvCrimeCaption" class="text-xs text-black dark:text-black mb-2"></p>
-                <div id="bdmvCrimeChart" class="text-black dark:text-black"></div>
+                <h3 class="text-base font-semibold text-black dark:text-white dark:text-white mb-1">Évolution du nombre d'infractions</h3>
+                <p id="bdmvCrimeCaption" class="text-xs text-black dark:text-white dark:text-black dark:text-white mb-2"></p>
+                <div id="bdmvCrimeChart" class="text-black dark:text-white dark:text-black dark:text-white"></div>
                 <div id="bdmvCrimeLegend" class="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs"></div>
             </div>
         </div>
 
-        <p class="text-[11px] text-black mt-6">
+        <p class="text-[11px] text-black dark:text-white mt-6">
             Source : <a id="bdmvSourceLink" href="#" target="_blank" rel="noopener" class="hover:underline">bien-dans-ma-ville.fr</a>
             — données INSEE (population) et bases de la délinquance enregistrée (police/gendarmerie).
         </p>
@@ -216,7 +216,7 @@
 
     <!-- Raw JSON Data -->
     <div class="mt-6">
-        <button onclick="toggleJsonData()" class="flex items-center text-sm text-black hover:text-black transition">
+        <button onclick="toggleJsonData()" class="flex items-center text-sm text-black dark:text-white hover:text-black dark:text-white transition">
             <i data-lucide="code" class="w-4 h-4 mr-2"></i>
             <span id="jsonToggleText">Afficher les données brutes (JSON)</span>
             <i data-lucide="chevron-down" id="jsonChevron" class="w-4 h-4 ml-1 transition-transform"></i>
@@ -229,8 +229,8 @@
 
 <div id="errorState" class="hidden text-center py-12" style="display: none;">
     <i data-lucide="alert-circle" class="w-16 h-16 text-red-400 mx-auto mb-4"></i>
-    <h3 class="text-lg font-medium text-black dark:text-white mb-2">Bien non trouvé</h3>
-    <p class="text-black dark:text-white mb-4">Ce bien n'existe pas ou n'est plus disponible.</p>
+    <h3 class="text-lg font-medium text-black dark:text-white dark:text-white mb-2">Bien non trouvé</h3>
+    <p class="text-black dark:text-white dark:text-white mb-4">Ce bien n'existe pas ou n'est plus disponible.</p>
     <a href="/" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
         Retour à la recherche
     </a>
@@ -262,15 +262,15 @@
 <!-- Fullscreen map modal -->
 <div id="mapFullscreenModal" class="fixed inset-0 bg-white dark:bg-gray-900 z-[9999] hidden">
     <div class="absolute top-4 right-4 z-[1000] flex gap-2">
-        <button onclick="closeMapFullscreen()" class="p-2 bg-white dark:bg-gray-800 shadow-lg rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-black dark:text-white transition">
+        <button onclick="closeMapFullscreen()" class="p-2 bg-white dark:bg-gray-800 shadow-lg rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-black dark:text-white dark:text-white transition">
             <i data-lucide="x" class="w-6 h-6"></i>
         </button>
     </div>
     <div id="fullscreenMap" class="w-full h-full z-[998]"></div>
     <!-- Fullscreen POI Legend -->
     <div class="absolute bottom-4 left-4 z-[1000] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
-        <p class="text-xs text-black dark:text-white mb-2 font-medium">Commodités (500m) :</p>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-black dark:text-white">
+        <p class="text-xs text-black dark:text-white dark:text-white mb-2 font-medium">Commodités (500m) :</p>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-black dark:text-white dark:text-white">
             <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Transport</span>
             <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Écoles</span>
             <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> Commerces</span>
@@ -444,7 +444,7 @@
                         const pct = Math.round((ratio - 1) * 100);
                         indicatorHtml = `<span class="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded bg-red-100 text-red-600 text-sm font-medium" title="Prix au m² supérieur à la moyenne"><i data-lucide="trending-up" class="w-4 h-4"></i>+${pct}% vs moyenne</span>`;
                     } else {
-                        indicatorHtml = `<span class="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 text-black text-sm font-medium" title="Prix au m² proche de la moyenne"><i data-lucide="minus" class="w-4 h-4"></i>≈ moyenne</span>`;
+                        indicatorHtml = `<span class="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-black dark:text-white text-sm font-medium" title="Prix au m² proche de la moyenne"><i data-lucide="minus" class="w-4 h-4"></i>≈ moyenne</span>`;
                     }
                     
                     document.getElementById('price').insertAdjacentHTML('afterend', indicatorHtml);
@@ -471,8 +471,8 @@
                                         city.name;
                     
                     priceSection.innerHTML = `
-                        <p class="text-black dark:text-white mb-1 flex items-center gap-1">${dataSource} - ${mainCityName} ${cityNote}</p>
-                        <div class="grid grid-cols-2 gap-2 text-black dark:text-white">
+                        <p class="text-black dark:text-white dark:text-white mb-1 flex items-center gap-1">${dataSource} - ${mainCityName} ${cityNote}</p>
+                        <div class="grid grid-cols-2 gap-2 text-black dark:text-white dark:text-white">
                             <div>${isRental ? 'Loyer' : 'Prix'} m² moyen: <strong>${Math.round(priceData.prix_m2_moyen).toLocaleString('fr-FR')} ${priceUnit}</strong></div>
                             <div>Ce bien: <strong>${Math.round(prixM2).toLocaleString('fr-FR')} ${priceUnit}</strong></div>
                         </div>
@@ -505,9 +505,9 @@
         // Main stats
         const stats = document.getElementById('mainStats');
         stats.innerHTML = `
-            ${prop.surface ? `<div class="text-center"><div class="text-2xl font-bold text-black dark:text-white">${prop.surface}</div><div class="text-sm text-black dark:text-white">m²</div></div>` : ''}
-            ${prop.room ? `<div class="text-center"><div class="text-2xl font-bold text-black dark:text-white">${prop.room}</div><div class="text-sm text-black dark:text-white">pièces</div></div>` : ''}
-            ${prop.bedroom ? `<div class="text-center"><div class="text-2xl font-bold text-black dark:text-white">${prop.bedroom}</div><div class="text-sm text-black dark:text-white">chambres</div></div>` : ''}
+            ${prop.surface ? `<div class="text-center"><div class="text-2xl font-bold text-black dark:text-white dark:text-white">${prop.surface}</div><div class="text-sm text-black dark:text-white dark:text-white">m²</div></div>` : ''}
+            ${prop.room ? `<div class="text-center"><div class="text-2xl font-bold text-black dark:text-white dark:text-white">${prop.room}</div><div class="text-sm text-black dark:text-white dark:text-white">pièces</div></div>` : ''}
+            ${prop.bedroom ? `<div class="text-center"><div class="text-2xl font-bold text-black dark:text-white dark:text-white">${prop.bedroom}</div><div class="text-sm text-black dark:text-white dark:text-white">chambres</div></div>` : ''}
         `;
         
         // Dates
@@ -542,7 +542,7 @@
         if (features.length > 0) {
             document.getElementById('featuresSection').classList.remove('hidden');
             document.getElementById('features').innerHTML = features.map(f => `
-                <div class="flex items-center text-black dark:text-white">
+                <div class="flex items-center text-black dark:text-white dark:text-white">
                     <i data-lucide="check" class="w-4 h-4 mr-2 text-green-500"></i>
                     <span>${f}</span>
                 </div>
@@ -570,14 +570,14 @@
             costEl.classList.remove('hidden');
             costEl.innerHTML = `
                 <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <p class="text-xs text-black dark:text-white mb-1 flex items-center gap-1">
+                    <p class="text-xs text-black dark:text-white dark:text-white mb-1 flex items-center gap-1">
                         <i data-lucide="zap" class="w-3 h-3"></i>Coût énergétique annuel estimé
                     </p>
-                    <p class="text-lg font-bold text-black dark:text-white">
+                    <p class="text-lg font-bold text-black dark:text-white dark:text-white">
                         ${new Intl.NumberFormat('fr-FR').format(energyCost.low)} € – ${new Intl.NumberFormat('fr-FR').format(energyCost.high)} €
-                        <span class="text-sm font-normal text-black dark:text-white">/ an</span>
+                        <span class="text-sm font-normal text-black dark:text-white dark:text-white">/ an</span>
                     </p>
-                    <p class="text-[11px] text-black mt-1">≈ ${new Intl.NumberFormat('fr-FR').format(energyCost.annualKwh)} kWh/an pour ${prop.surface} m². Estimation indicative d'après le DPE.</p>
+                    <p class="text-[11px] text-black dark:text-white mt-1">≈ ${new Intl.NumberFormat('fr-FR').format(energyCost.annualKwh)} kWh/an pour ${prop.surface} m². Estimation indicative d'après le DPE.</p>
                 </div>
             `;
         }
@@ -585,9 +585,9 @@
         // Contact
         const contact = advert.contact || {};
         document.getElementById('contactInfo').innerHTML = `
-            ${contact.agency ? `<div class="flex items-center"><i data-lucide="building" class="w-5 h-5 mr-2 text-black"></i><span>${contact.agency}</span></div>` : ''}
-            ${contact.phone ? `<div class="flex items-center"><i data-lucide="phone" class="w-5 h-5 mr-2 text-black"></i><a href="tel:${contact.phone}" class="text-blue-600 hover:underline">${contact.phone}</a></div>` : ''}
-            ${contact.email ? `<div class="flex items-center"><i data-lucide="mail" class="w-5 h-5 mr-2 text-black"></i><a href="mailto:${contact.email}" class="text-blue-600 hover:underline">${contact.email}</a></div>` : ''}
+            ${contact.agency ? `<div class="flex items-center"><i data-lucide="building" class="w-5 h-5 mr-2 text-black dark:text-white"></i><span>${contact.agency}</span></div>` : ''}
+            ${contact.phone ? `<div class="flex items-center"><i data-lucide="phone" class="w-5 h-5 mr-2 text-black dark:text-white"></i><a href="tel:${contact.phone}" class="text-blue-600 hover:underline">${contact.phone}</a></div>` : ''}
+            ${contact.email ? `<div class="flex items-center"><i data-lucide="mail" class="w-5 h-5 mr-2 text-black dark:text-white"></i><a href="mailto:${contact.email}" class="text-blue-600 hover:underline">${contact.email}</a></div>` : ''}
         `;
         
         // Original URL with site name - try to find URL in any advert
@@ -727,7 +727,7 @@
             'F': 'bg-red-200 text-red-900',
             'G': 'bg-red-300 text-red-900',
         };
-        return colors[cat] || 'bg-gray-100 text-black';
+        return colors[cat] || 'bg-gray-100 text-black dark:text-white';
     }
     
     function getGHGColor(cat) {
@@ -738,9 +738,9 @@
             'D': 'bg-blue-100 text-blue-800',
             'E': 'bg-cyan-100 text-cyan-800',
             'F': 'bg-teal-100 text-teal-800',
-            'G': 'bg-gray-200 text-black',
+            'G': 'bg-gray-200 text-black dark:text-white',
         };
-        return colors[cat] || 'bg-gray-100 text-black';
+        return colors[cat] || 'bg-gray-100 text-black dark:text-white';
     }
     
     function buildDPEGauge(category, value) {
@@ -810,7 +810,7 @@
             'B2': 'bg-yellow-100 text-yellow-800',
             'C': 'bg-green-100 text-green-800',
         };
-        return colors[zone] || 'bg-gray-100 text-black';
+        return colors[zone] || 'bg-gray-100 text-black dark:text-white';
     }
     
     function getZonageLabel(zone) {
@@ -977,11 +977,11 @@
         // Population stats grid
         document.getElementById('bdmvStats').innerHTML = stats.map(s => `
             <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/40">
-                <div class="flex items-center gap-1.5 text-black dark:text-black mb-1">
+                <div class="flex items-center gap-1.5 text-black dark:text-white dark:text-black dark:text-white mb-1">
                     <i data-lucide="${bdmvStatIcon(s.label)}" class="w-3.5 h-3.5"></i>
                     <span class="text-[11px] leading-tight">${s.label}</span>
                 </div>
-                <div class="text-lg font-bold text-black dark:text-white">${s.value}</div>
+                <div class="text-lg font-bold text-black dark:text-white dark:text-white">${s.value}</div>
             </div>
         `).join('');
 
@@ -1006,9 +1006,9 @@
             document.getElementById('bdmvCrimeChart').innerHTML =
                 bdmvMultiLineChart(crime.years, crime.series, colors);
             document.getElementById('bdmvCrimeLegend').innerHTML = crime.series.map((s, i) => `
-                <span class="flex items-center gap-1.5 text-black dark:text-black">
+                <span class="flex items-center gap-1.5 text-black dark:text-white dark:text-black dark:text-white">
                     <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: ${colors[i]}"></span>
-                    ${s.label} <span class="text-black">(${bdmvNum(s.values[s.values.length - 1])})</span>
+                    ${s.label} <span class="text-black dark:text-white">(${bdmvNum(s.values[s.values.length - 1])})</span>
                 </span>
             `).join('');
         }
@@ -1030,9 +1030,9 @@
                 hasRisks = true;
                 html += `
                     <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/50">
-                        <div class="font-medium text-black dark:text-white mb-2">Risques identifiés sur la commune</div>
+                        <div class="font-medium text-black dark:text-white dark:text-white mb-2">Risques identifiés sur la commune</div>
                         <div class="flex flex-wrap gap-2">
-                            ${risquesDetail.map(r => `<span class="px-2 py-1 text-xs rounded bg-slate-200 dark:bg-slate-800 text-black dark:text-white">${r.libelle_risque_long}</span>`).join('')}
+                            ${risquesDetail.map(r => `<span class="px-2 py-1 text-xs rounded bg-slate-200 dark:bg-slate-800 text-black dark:text-white dark:text-white">${r.libelle_risque_long}</span>`).join('')}
                         </div>
                     </div>
                 `;
@@ -1131,17 +1131,17 @@
             html += `
                 <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition" onclick="toggleRiskDetails('cavites-details')">
-                        <span class="font-medium text-black dark:text-white flex items-center gap-2">
+                        <span class="font-medium text-black dark:text-white dark:text-white flex items-center gap-2">
                             <i data-lucide="chevron-down" class="w-4 h-4"></i>Cavités souterraines
                         </span>
-                        <span class="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 text-black dark:text-white">${cavites.length} à proximité</span>
+                        <span class="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 text-black dark:text-white dark:text-white">${cavites.length} à proximité</span>
                     </div>
-                    <div id="cavites-details" class="hidden px-3 pb-3 text-sm text-black dark:text-white border-t border-gray-200 dark:border-gray-700 pt-2">
+                    <div id="cavites-details" class="hidden px-3 pb-3 text-sm text-black dark:text-white dark:text-white border-t border-gray-200 dark:border-gray-700 pt-2">
                         <p class="mb-2">${riskDescriptions.cavites.description}</p>
                         <ul class="list-disc list-inside mb-2 space-y-1">
                             ${cavites.slice(0, 5).map(c => `<li>${c.nom || c.type || 'Cavité'} (${c.type || 'type inconnu'})</li>`).join('')}
                         </ul>
-                        <a href="${riskDescriptions.cavites.link}" target="_blank" class="text-black dark:text-white hover:underline flex items-center gap-1">
+                        <a href="${riskDescriptions.cavites.link}" target="_blank" class="text-black dark:text-white dark:text-white hover:underline flex items-center gap-1">
                             <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
                         </a>
                     </div>
@@ -1156,14 +1156,14 @@
             html += `
                 <div class="rounded-lg bg-stone-50 dark:bg-stone-900/30 border border-stone-200 dark:border-stone-700/50 overflow-hidden">
                     <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-stone-100 dark:hover:bg-stone-800/50 transition" onclick="toggleRiskDetails('mvt-details')">
-                        <span class="font-medium text-black dark:text-white flex items-center gap-2">
+                        <span class="font-medium text-black dark:text-white dark:text-white flex items-center gap-2">
                             <i data-lucide="chevron-down" class="w-4 h-4"></i>Mouvements de terrain
                         </span>
-                        <span class="px-2 py-1 text-xs rounded bg-stone-200 dark:bg-stone-800 text-black dark:text-white">${mvts.length} événement(s)</span>
+                        <span class="px-2 py-1 text-xs rounded bg-stone-200 dark:bg-stone-800 text-black dark:text-white dark:text-white">${mvts.length} événement(s)</span>
                     </div>
-                    <div id="mvt-details" class="hidden px-3 pb-3 text-sm text-black dark:text-white border-t border-stone-200 dark:border-stone-700/50 pt-2">
+                    <div id="mvt-details" class="hidden px-3 pb-3 text-sm text-black dark:text-white dark:text-white border-t border-stone-200 dark:border-stone-700/50 pt-2">
                         <p class="mb-2">${riskDescriptions.mouvements_terrain.description}</p>
-                        <a href="${riskDescriptions.mouvements_terrain.link}" target="_blank" class="text-black dark:text-white hover:underline flex items-center gap-1">
+                        <a href="${riskDescriptions.mouvements_terrain.link}" target="_blank" class="text-black dark:text-white dark:text-white hover:underline flex items-center gap-1">
                             <i data-lucide="external-link" class="w-3 h-3"></i>En savoir plus sur Géorisques
                         </a>
                     </div>
