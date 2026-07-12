@@ -30,6 +30,21 @@ class Settings(BaseSettings):
     bien_dans_ma_ville_base_url: str = "https://www.bien-dans-ma-ville.fr"
     bien_dans_ma_ville_cache_days: int = 30
 
+    # Îlot de chaleur urbain (LCZ Cerema) : couche raster affichée en surimpression
+    # sur la carte de la fiche annonce — on voit l'exposition à la surchauffe du
+    # quartier (bâti dense = chaud, végétation/eau = frais). Servie par l'endpoint
+    # ArcGIS "export" du portail Cartagène (le WMS standard est bloqué par un proxy).
+    # Couverture : aires urbaines > 50 000 hab. ; couche visible au zoom ~14-19
+    # (minScale 1:36111). Gratuit, sans clé, aucune donnée hébergée, non bloquant.
+    # Désactivable via heat_overlay_enabled ; l'URL/couche restent échangeables.
+    heat_overlay_enabled: bool = True
+    heat_overlay_export_url: str = (
+        "https://cartagene.cerema.fr/server/rest/services/"
+        "l_lcz_spot_000_2022_mil/MapServer/export"
+    )
+    heat_overlay_layer: str = "0"
+    heat_overlay_attribution: str = "Cerema — Zones Climatiques Locales (LCZ)"
+
     # Leboncoin (DataDome-protected JSON API). Disabled until a transport is
     # configured. Two transports (see scrapers/transport.py):
     #   "scrapfly" — route through Scrapfly's Web Unlocker (residential IP + ASP

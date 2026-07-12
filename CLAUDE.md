@@ -87,6 +87,15 @@ GEORISQUES_API_BASE_URL=https://georisques.gouv.fr/api/v1
 # BIEN_DANS_MA_VILLE_BASE_URL=https://www.bien-dans-ma-ville.fr
 # BIEN_DANS_MA_VILLE_CACHE_DAYS=30
 
+# Îlot de chaleur urbain (LCZ Cerema) : couche raster de surchauffe du quartier,
+# superposée sur la carte de la fiche annonce (bâti dense = chaud, végétation/eau =
+# frais). Servie par l'endpoint ArcGIS "export" du portail Cartagène (le WMS est
+# bloqué par un proxy). Gratuit, sans clé, aucune donnée hébergée. Couverture : aires
+# urbaines > 50 000 hab. ; visible au zoom ~14-19. ACTIF par défaut, désactivable.
+# HEAT_OVERLAY_ENABLED=true
+# HEAT_OVERLAY_EXPORT_URL=https://cartagene.cerema.fr/server/rest/services/l_lcz_spot_000_2022_mil/MapServer/export
+# HEAT_OVERLAY_LAYER=0
+
 # Leboncoin (optionnel, derrière DataDome) — désactivé par défaut.
 # Transport "scrapfly" (recommandé) : Scrapfly Web Unlocker fournit l'IP résidentielle
 # et franchit DataDome, l'IP maison n'est jamais exposée. Renseigner SCRAPFLY_API_KEY.

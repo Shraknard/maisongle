@@ -98,6 +98,15 @@
                 <div id="poiLoading" class="mt-2 text-xs text-black dark:text-white hidden">
                     <span class="animate-pulse">Chargement des commodités...</span>
                 </div>
+                <!-- Heat-island (LCZ) legend -->
+                <div id="heatLegend" class="mt-3 pt-3 border-t dark:border-gray-700 hidden">
+                    <p class="text-xs text-black dark:text-white mb-2">
+                        Îlot de chaleur — exposition à la surchauffe du quartier
+                        <span class="text-gray-500 dark:text-gray-400">(activable sur la carte, zones urbaines uniquement)</span>
+                    </p>
+                    <div id="heatLegendItems" class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-black dark:text-white"></div>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-2">Source : Cerema — Zones Climatiques Locales</p>
+                </div>
             </div>
         </div>
         
@@ -291,6 +300,8 @@
     let currentImageIndex = 0;
     let allPictures = [];
     let cachedPOIs = [];
+    let heatOverlay = null;
+    let fullscreenHeatOverlay = null;
     
     // Extract site name from URL
     function getSiteName(url) {
@@ -633,7 +644,8 @@
 
         // Map
         initMap(prop.location || prop.city?.location);
-        
+        renderHeatLegend();
+
         // Prepare JSON data for display
         document.getElementById('jsonData').textContent = JSON.stringify(prop, null, 2);
     }
@@ -1265,14 +1277,87 @@
         }
     }
     
+    // --- Îlot de chaleur urbain (LCZ Cerema) ---------------------------------
+    // Zones Climatiques Locales : classes du bâti (chaudes) au végétal/eau (fraîches).
+    // Couleurs = palette officielle de la donnée (doivent coller aux tuiles).
+    const LCZ_CLASSES = [
+        { c: '#8c0000', label: 'Tours compactes' },
+        { c: '#d10000', label: 'Immeubles compacts' },
+        { c: '#ff0000', label: 'Maisons compactes' },
+        { c: '#bf4d00', label: 'Tours espacées' },
+        { c: '#fa6600', label: 'Immeubles espacés' },
+        { c: '#ff9955', label: 'Maisons espacées' },
+        { c: '#faee05', label: 'Constructions légères' },
+        { c: '#bcbcbc', label: 'Grande emprise (industrie/commerce)' },
+        { c: '#ffccaa', label: 'Maisons diffuses' },
+        { c: '#006a00', label: 'Espace densément arboré' },
+        { c: '#00aa00', label: 'Espace arboré clairsemé' },
+        { c: '#648525', label: 'Espace végétalisé hétérogène' },
+        { c: '#b9db79', label: 'Végétation basse' },
+        { c: '#000000', label: 'Sol imperméable' },
+        { c: '#fbf7ae', label: 'Sol nu perméable' },
+        { c: '#6a6aff', label: 'Surface en eau' },
+    ];
+
+    // ArcGIS dynamic MapServer served as XYZ tiles (WMS is proxy-blocked). Each
+    // tile requests an "export" image for its EPSG:3857 bbox. The layer only
+    // renders at zoom ~14-19 (data minScale 1:36111); outside it returns blank.
+    function makeHeatLayer(cfg) {
+        const WORLD = 20037508.342789244;
+        const HeatTiles = L.TileLayer.extend({
+            getTileUrl: function (coords) {
+                const size = (2 * WORLD) / Math.pow(2, coords.z);
+                const xmin = -WORLD + coords.x * size;
+                const ymax = WORLD - coords.y * size;
+                const p = new URLSearchParams({
+                    bbox: `${xmin},${ymax - size},${xmin + size},${ymax}`,
+                    bboxSR: '3857', imageSR: '3857', size: '256,256',
+                    format: 'png32', transparent: 'true',
+                    layers: 'show:' + cfg.layer, dpi: '96', f: 'image',
+                });
+                return cfg.export_url + '?' + p.toString();
+            },
+        });
+        return new HeatTiles('', {
+            opacity: 0.55, minZoom: 14, maxZoom: 19,
+            attribution: cfg.attribution, pane: 'overlayPane',
+        });
+    }
+
+    // Add the heat overlay to a map with a toggle control. Returns the layer.
+    function addHeatOverlay(targetMap) {
+        const cfg = propertyData?.heat_overlay;
+        if (!cfg) return null;
+        const layer = makeHeatLayer(cfg).addTo(targetMap);
+        L.control.layers(null, { "Îlot de chaleur (LCZ)": layer },
+            { collapsed: false, position: 'topright' }).addTo(targetMap);
+        return layer;
+    }
+
+    // Legend under the map (only when the overlay is active).
+    function renderHeatLegend() {
+        const cfg = propertyData?.heat_overlay;
+        const box = document.getElementById('heatLegend');
+        if (!box) return;
+        if (!cfg) { box.classList.add('hidden'); return; }
+        const swatches = LCZ_CLASSES.map(k =>
+            `<span class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-sm border border-black/10 dark:border-white/20" style="background-color:${k.c}"></span>
+                ${k.label}
+            </span>`).join('');
+        document.getElementById('heatLegendItems').innerHTML = swatches;
+        box.classList.remove('hidden');
+    }
+
     function initMap(locations) {
         if (!locations?.lat || !locations?.lon) return;
-        
+
         map = L.map('map').setView([locations.lat, locations.lon], 16);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
-        
+        heatOverlay = addHeatOverlay(map);
+
         // Property marker (red, larger)
         const propertyIcon = L.divIcon({
             html: '<div class="w-8 h-8 bg-red-600 border-2 border-white rounded-full shadow-lg flex items-center justify-center"><svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg></div>',
@@ -1404,7 +1489,8 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(fullscreenMap);
-            
+            fullscreenHeatOverlay = addHeatOverlay(fullscreenMap);
+
             // Property marker
             const propertyIcon = L.divIcon({
                 html: '<div class="w-10 h-10 bg-red-600 border-2 border-white rounded-full shadow-lg flex items-center justify-center"><svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg></div>',
