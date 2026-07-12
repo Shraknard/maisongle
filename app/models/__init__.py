@@ -4,8 +4,9 @@ from app.models.saved_search import SavedSearch
 from app.models.dvf_commune import DVFCommune
 from app.models.loyer_commune import LoyerCommune
 from app.models.listing import Listing, PriceHistory, Hidden, ScrapeRun
+from app.models.commune_stats import CommuneStats
 
 __all__ = [
     "Favorite", "ZonageCommune", "SavedSearch", "DVFCommune", "LoyerCommune",
-    "Listing", "PriceHistory", "Hidden", "ScrapeRun",
+    "Listing", "PriceHistory", "Hidden", "ScrapeRun", "CommuneStats",
 ]

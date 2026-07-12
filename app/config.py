@@ -21,6 +21,15 @@ class Settings(BaseSettings):
     # Georisques API
     georisques_api_base_url: str = "https://georisques.gouv.fr/api/v1"
 
+    # bien-dans-ma-ville.fr : enrichissement socio-démographique au niveau commune
+    # (statistiques de population, évolution des habitants / des infractions).
+    # Source gratuite et sans anti-bot, activée par défaut. Récupérée à l'affichage
+    # d'une annonce et mise en cache par INSEE (table commune_stats) pendant
+    # bien_dans_ma_ville_cache_days jours. Le fetch est non bloquant.
+    bien_dans_ma_ville_enabled: bool = True
+    bien_dans_ma_ville_base_url: str = "https://www.bien-dans-ma-ville.fr"
+    bien_dans_ma_ville_cache_days: int = 30
+
     # Leboncoin (DataDome-protected JSON API). Disabled until a transport is
     # configured. Two transports (see scrapers/transport.py):
     #   "scrapfly" — route through Scrapfly's Web Unlocker (residential IP + ASP

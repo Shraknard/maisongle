@@ -6,22 +6,22 @@
 <div class="space-y-6">
     <div class="bg-white rounded-xl shadow-sm p-6">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-900">Mes favoris</h1>
-            <span id="favoriteCount" class="text-sm text-gray-500"></span>
+            <h1 class="text-2xl font-bold text-black">Mes favoris</h1>
+            <span id="favoriteCount" class="text-sm text-black"></span>
         </div>
         
         <div id="loading" class="text-center py-8">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p class="mt-4 text-gray-500">Chargement...</p>
+            <p class="mt-4 text-black">Chargement...</p>
         </div>
         
         <div id="favorites" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
         </div>
         
         <div id="emptyState" class="hidden text-center py-12">
-            <i data-lucide="heart" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun favori</h3>
-            <p class="text-gray-500 mb-4">Vous n'avez pas encore ajouté de bien en favoris.</p>
+            <i data-lucide="heart" class="w-16 h-16 text-black mx-auto mb-4"></i>
+            <h3 class="text-lg font-medium text-black mb-2">Aucun favori</h3>
+            <p class="text-black mb-4">Vous n'avez pas encore ajouté de bien en favoris.</p>
             <a href="/" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                 <i data-lucide="search" class="w-5 h-5 mr-2"></i>
                 Rechercher des biens
@@ -32,8 +32,8 @@
     <!-- Map of favorites -->
     <div id="mapContainer" class="bg-white rounded-xl shadow-sm p-4 hidden">
         <div class="flex justify-between items-center mb-3">
-            <h2 class="text-lg font-semibold text-gray-900">Carte des favoris</h2>
-            <button onclick="openMapFullscreen()" class="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition">
+            <h2 class="text-lg font-semibold text-black">Carte des favoris</h2>
+            <button onclick="openMapFullscreen()" class="flex items-center gap-1 text-sm text-black hover:text-blue-600 transition">
                 <i data-lucide="maximize-2" class="w-4 h-4"></i>
                 <span>Agrandir</span>
             </button>
@@ -51,7 +51,7 @@
         <div id="fullscreenMap" class="w-full h-full"></div>
         <!-- Fullscreen POI Legend -->
         <div class="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-3">
-            <p class="text-xs text-gray-500 mb-2 font-medium">Commodités :</p>
+            <p class="text-xs text-black mb-2 font-medium">Commodités :</p>
             <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Transport</span>
                 <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Écoles</span>
@@ -60,7 +60,7 @@
                 <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-500"></span> Loisirs</span>
             </div>
         </div>
-        <div id="poiLoading" class="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg px-3 py-2 text-xs text-gray-500 hidden">
+        <div id="poiLoading" class="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg px-3 py-2 text-xs text-black hidden">
             <span class="animate-pulse">Chargement des commodités...</span>
         </div>
     </div>
@@ -164,7 +164,7 @@
         } else if (ratio > 1.15) {
             return { color: 'text-red-500', bg: 'bg-red-100', label: '+' + Math.round((ratio - 1) * 100) + '%', icon: 'trending-up' };
         } else {
-            return { color: 'text-gray-500', bg: 'bg-gray-100', label: '≈', icon: 'minus' };
+            return { color: 'text-black', bg: 'bg-gray-100', label: '≈', icon: 'minus' };
         }
     }
     
@@ -196,16 +196,16 @@
                         ${fav.zonage_abc ? `<span class="absolute bottom-3 right-3 px-2 py-1 bg-green-600 text-white text-xs font-medium rounded">Zone ${fav.zonage_abc}</span>` : ''}
                     </div>
                     <div class="p-4">
-                        <h3 class="font-semibold text-gray-900 line-clamp-1 mb-2">${fav.title || 'Sans titre'}</h3>
+                        <h3 class="font-semibold text-black line-clamp-1 mb-2">${fav.title || 'Sans titre'}</h3>
                         <div class="flex items-center gap-2 mb-2">
                             <p class="text-blue-600 font-bold text-lg">${formatPrice(fav.price, fav.transaction_type)}</p>
                             ${priceIndicator ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded ${priceIndicator.bg} ${priceIndicator.color} text-xs font-medium" title="vs moyenne commune"><i data-lucide="${priceIndicator.icon}" class="w-3 h-3"></i>${priceIndicator.label}</span>` : ''}
                         </div>
-                        <div class="flex items-center text-sm text-gray-500 mb-3">
+                        <div class="flex items-center text-sm text-black mb-3">
                             <i data-lucide="map-pin" class="w-4 h-4 mr-1"></i>
                             <span>${fav.city_name || ''} ${fav.city_zipcode || ''}</span>
                         </div>
-                        <div class="flex items-center space-x-4 text-sm text-gray-600">
+                        <div class="flex items-center space-x-4 text-sm text-black">
                             ${fav.surface ? `<span class="flex items-center"><i data-lucide="square" class="w-4 h-4 mr-1"></i>${fav.surface} m²</span>` : ''}
                             ${fav.room ? `<span class="flex items-center"><i data-lucide="door-open" class="w-4 h-4 mr-1"></i>${fav.room} p.</span>` : ''}
                             ${fav.bedroom ? `<span class="flex items-center"><i data-lucide="bed" class="w-4 h-4 mr-1"></i>${fav.bedroom} ch.</span>` : ''}
@@ -213,7 +213,7 @@
                         
                         <!-- Georisques summary -->
                         ${fav.georisques ? `
-                        <div class="text-xs text-gray-500 mt-3 flex flex-wrap gap-1">
+                        <div class="text-xs text-black mt-3 flex flex-wrap gap-1">
                             ${fav.georisques.radon ? '<span class="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded">Radon</span>' : ''}
                             ${fav.georisques.seismes ? '<span class="px-2 py-0.5 bg-orange-100 text-orange-800 rounded">Séisme</span>' : ''}
                             ${fav.georisques.inondations ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded">Inondation</span>' : ''}
@@ -245,7 +245,7 @@
                         ${picture ? `<img src="${picture}" alt="" class="w-full h-24 object-cover rounded mb-2" onerror="this.style.display='none'">` : ''}
                         <strong class="line-clamp-1">${fav.title || 'Sans titre'}</strong>
                         <div class="text-blue-600 font-bold">${formatPrice(fav.price, fav.transaction_type)}</div>
-                        <div class="text-gray-500 text-sm">${fav.city_name || ''}</div>
+                        <div class="text-black text-sm">${fav.city_name || ''}</div>
                         ${fav.zonage_abc ? `<div class="text-green-600 text-sm">Zone ${fav.zonage_abc}</div>` : ''}
                         <a href="/property/${fav.property_uuid}" class="text-blue-500 hover:underline text-sm">Voir le détail →</a>
                     </div>
@@ -338,7 +338,7 @@
                             ${picture ? `<img src="${picture}" alt="" class="w-full h-24 object-cover rounded mb-2" onerror="this.style.display='none'">` : ''}
                             <strong class="line-clamp-1">${fav.title || 'Sans titre'}</strong>
                             <div class="text-blue-600 font-bold">${formatPrice(fav.price, fav.transaction_type)}</div>
-                            <div class="text-gray-500 text-sm">${fav.city_name || ''}</div>
+                            <div class="text-black text-sm">${fav.city_name || ''}</div>
                             ${fav.zonage_abc ? `<div class="text-green-600 text-sm">Zone ${fav.zonage_abc}</div>` : ''}
                         </div>
                     `;
@@ -456,7 +456,7 @@
                 const name = tags.name || config.label;
                 const icon = L.divIcon({
                     className: 'poi-marker',
-                    html: `<div style="width:12px;height:12px;background:${config.color};border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>`,
+                    html: `<div style="width:12px;height:12px;background:${config.color};border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0, 0, 0, 0.4);"></div>`,
                     iconSize: [12, 12],
                     iconAnchor: [6, 6]
                 });

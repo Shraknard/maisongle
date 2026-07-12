@@ -17,7 +17,7 @@ app/
   main.py              # Point d'entrée FastAPI, routes pages HTML
   config.py            # Settings via pydantic-settings + .env
   database.py          # Engine SQLAlchemy + session
-  models/              # ORM models (Favorite, Listing/PriceHistory/Hidden/ScrapeRun, DVFCommune, LoyerCommune, ZonageCommune, SavedSearch)
+  models/              # ORM models (Favorite, Listing/PriceHistory/Hidden/ScrapeRun, DVFCommune, LoyerCommune, ZonageCommune, SavedSearch, CommuneStats)
   schemas/             # Pydantic schemas (validation entrée/sortie API)
   routers/             # Endpoints API REST
     search.py          # Recherche d'annonces (DB + refresh throttlé), autocomplétion villes, DVF/loyers
@@ -47,6 +47,8 @@ app/
     enrichment.py      # Orchestration enrichissement (zonage + géorisques)
     georisques.py      # Client API Géorisques (risques naturels/technologiques)
     zonage.py          # Lookup zonage ABC Pinel en base
+    bien_dans_ma_ville.py  # Client + cache (table commune_stats) des stats socio-démo
+                       #   de bien-dans-ma-ville.fr (population + évolution habitants/infractions)
   templates/           # Pages HTML Jinja2 (index, favorites, property, calculator, documentation)
 scripts/               # Import de données (DVF, loyers, zonage) depuis CSV/Excel vers PostgreSQL
 data/                  # Fichiers CSV/Excel sources (DVF, loyers, zonage ABC)
@@ -75,6 +77,15 @@ Fichier `.env` à la racine :
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/maisongle
 GEORISQUES_API_BASE_URL=https://georisques.gouv.fr/api/v1
+
+# bien-dans-ma-ville.fr : enrichissement socio-démographique par commune
+# (stats population + graphes évolution habitants/infractions). Gratuit, sans
+# anti-bot, ACTIF par défaut. Récupéré au chargement d'une annonce, résout par
+# code INSEE (slug ignoré), mis en cache par commune (table commune_stats) pendant
+# BIEN_DANS_MA_VILLE_CACHE_DAYS jours. Fetch non bloquant.
+# BIEN_DANS_MA_VILLE_ENABLED=true
+# BIEN_DANS_MA_VILLE_BASE_URL=https://www.bien-dans-ma-ville.fr
+# BIEN_DANS_MA_VILLE_CACHE_DAYS=30
 
 # Leboncoin (optionnel, derrière DataDome) — désactivé par défaut.
 # Transport "scrapfly" (recommandé) : Scrapfly Web Unlocker fournit l'IP résidentielle
@@ -184,6 +195,14 @@ complète et l'avancement. En résumé :
   départements, filtrage haversine, plafond 60 communes) ; Bien'ici combine leurs `zoneIds` en une requête ;
   `routers/search.py` filtre les résultats par distance haversine SQL.
 - Enrichissement (zonage ABC + géorisques) déclenché **uniquement à la mise en favori**.
+- **bien-dans-ma-ville.fr** (`services/bien_dans_ma_ville.py`) : enrichissement **au niveau
+  commune** (indépendant du bien), récupéré au chargement du **détail d'une annonce**
+  (`routers/listings`, favori ou non) et exposé dans la clé `bien_dans_ma_ville` de la réponse.
+  Trois blocs extraits de la page HTML (canvas `data-data*` + `table.bloc_chiffre`) : statistiques
+  de population, évolution du nombre d'habitants, évolution du nombre d'infractions (4 séries).
+  La page **résout par code INSEE** (slug ignoré) → un slug approximatif suffit. Mis en cache par
+  commune (`commune_stats`, TTL `BIEN_DANS_MA_VILLE_CACHE_DAYS`) ; fetch non bloquant. Rendu dans
+  `templates/property.html` (grille de stats + 2 graphiques SVG inline + lien vers la fiche source).
 
 ## A faire
 

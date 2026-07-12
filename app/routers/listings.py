@@ -6,11 +6,13 @@ from app.database import get_db
 from app.models.listing import Listing, Hidden
 from app.models.favorite import Favorite
 from app.services.enrichment import EnrichmentService
+from app.services.bien_dans_ma_ville import BienDansMaVilleService
 from app.services.listing_view import serialize_listing, price_history
 
 logger = logging.getLogger("routers.listings")
 router = APIRouter()
 enrichment_service = EnrichmentService()
+bdmv_service = BienDansMaVilleService()
 
 
 def _split_uid(uuid: str):
@@ -42,6 +44,12 @@ async def get_listing(uuid: str, db: Session = Depends(get_db)):
         )
         data["zonage_abc"] = enrichment.get("zonage_abc")
         data["georisques"] = enrichment.get("georisques")
+
+    # Commune-level socio-demographic stats (bien-dans-ma-ville.fr), cached per
+    # INSEE. Identical for every listing in a city; non-blocking on failure.
+    data["bien_dans_ma_ville"] = await bdmv_service.get_stats(
+        db, listing.city_insee, listing.city_name
+    )
 
     return data
 
